@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ANT-BOT Control v1.0</title>
+<title>ANT-BOT Control v1.01</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -204,7 +204,7 @@ input[type="range"] { width: 100%; }
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0</span></div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.01</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -246,7 +246,7 @@ input[type="range"] { width: 100%; }
 <div id="top">
   <button id="menuBtn">☰</button>
   <button id="fullscreenBtn">⛶</button>
-  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.0</span></div>
+  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.01</span></div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
 
@@ -263,7 +263,7 @@ input[type="range"] { width: 100%; }
 
 <script>
 /* ================= VERSION & CACHE MANAGEMENT ================= */
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.01";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -285,6 +285,7 @@ let rxBuffer = "";
 const overlay = document.getElementById("overlay");
 const settingsModal = document.getElementById("settingsModal");
 const statusEl = document.getElementById("status");
+const batteryEl = document.getElementById("battery");
 const cameraBG = document.getElementById("cameraBG");
 
 /* ================= CONTROL STATE ================= */
@@ -348,15 +349,25 @@ async function toggleCamera(on) {
 }
 
 /* ================= BLE CONNECT ================= */
+function onDisconnected() {
+  statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
+  statusEl.className = "status-disconnected";
+  batteryEl.textContent = "V: --.- V | I: ---.- mA";
+  rxChar = null;
+  txChar = null;
+  isWriting = false;
+}
+
 connectBtn.onclick = async () => {
   try {
     device = await navigator.bluetooth.requestDevice({
       filters: [
-        { name: "ANT-BOT_09EA" },
         { namePrefix: "ANT-BOT" }
       ],
       optionalServices: [SERVICE]
     });
+
+    device.addEventListener('gattserverdisconnected', onDisconnected);
 
     const server = await device.gatt.connect();
     const service = await server.getPrimaryService(SERVICE);
@@ -370,8 +381,7 @@ connectBtn.onclick = async () => {
     statusEl.innerHTML = `Connected <span class="version-badge">v${APP_VERSION}</span>`;
     statusEl.className = "status-connected";
   } catch (e) {
-    statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
-    statusEl.className = "status-disconnected";
+    onDisconnected();
     console.error(e);
   }
 };
@@ -379,34 +389,49 @@ connectBtn.onclick = async () => {
 /* ================= BLE RX ================= */
 function onNotify(e) {
   const data = new TextDecoder().decode(e.target.value);
-  for (const c of data) {
+  for (let idx = 0; idx < data.length; idx++) {
+    const c = data[idx];
     if (c === "\n" || c === "\r") {
-      if (rxBuffer) handleStatus(rxBuffer);
+      if (rxBuffer.trim().length > 0) handleStatus(rxBuffer);
       rxBuffer = "";
-    } else rxBuffer += c;
+    } else {
+      rxBuffer += c;
+    }
   }
 }
 
 /* ================= MOTOR LOOP ================= */
-setInterval(() => {
-  if (!rxChar) return;
+let isWriting = false;
+
+setInterval(async () => {
+  if (!rxChar || isWriting) return;
 
   const activeFwd = rightJoyActive ? forward : leftForward;
   const x = Math.round(Math.min(100, Math.max(-100, sideway * appSettings.maxSpeed * 100)));
   const y = Math.round(Math.min(100, Math.max(-100, activeFwd * appSettings.maxSpeed * 100)));
   const z = Math.round(Math.min(100, Math.max(-100, yaw * appSettings.maxSpeed * 100)));
 
-  rxChar.writeValue(
-    new TextEncoder().encode(`drive ${x},${y},${z}\n`)
-  );
-}, 20);
+  const packet = new TextEncoder().encode(`drive ${x},${y},${z}\n`);
+  isWriting = true;
+  try {
+    if (rxChar.writeValueWithoutResponse) {
+      await rxChar.writeValueWithoutResponse(packet);
+    } else {
+      await rxChar.writeValue(packet);
+    }
+  } catch (err) {
+    console.warn("Write dropped/error:", err);
+  } finally {
+    isWriting = false;
+  }
+}, 35);
 
 /* ================= STATUS PARSER ================= */
 function handleStatus(msg) {
-  const v = msg.match(/V=([\d.]+)/);
-  const i = msg.match(/I=([\d.]+)/);
+  const v = msg.match(/V=([-\d.]+)/);
+  const i = msg.match(/I=([-\d.]+)/);
   if (v && i) {
-    battery.textContent =
+    batteryEl.textContent =
       `V: ${(+v[1]).toFixed(2)} V | I: ${(+i[1]).toFixed(1)} mA`;
   }
 }

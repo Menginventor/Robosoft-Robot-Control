@@ -152,7 +152,7 @@ void setup() {
 
   BLECharacteristic *rx = service->createCharacteristic(
     BLE_RX_UUID,
-    BLECharacteristic::PROPERTY_WRITE
+    BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR
   );
 
   bleTx = service->createCharacteristic(
