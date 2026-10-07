@@ -185,15 +185,51 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 320px;
-  max-width: 90%;
+  width: 340px;
+  max-width: 92vw;
+  max-height: 86vh;
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: #1c1c1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  padding: 18px;
+  padding: 16px 18px;
   transform: translate(-50%, -50%);
   display: none;
   z-index: 1001;
   box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+}
+
+#settingsModal::-webkit-scrollbar {
+  width: 5px;
+}
+#settingsModal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+@media (max-height: 520px) {
+  #settingsModal {
+    max-height: calc(100dvh - 16px);
+    padding: 12px 16px;
+    width: 360px;
+  }
+  .settings-header {
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+  .settings-section {
+    margin-bottom: 12px;
+  }
+  .toggle-row {
+    padding: 5px 0;
+    font-size: 14px;
+  }
+  .primary-btn, .secondary-btn {
+    padding: 8px;
+  }
 }
 
 .settings-header {
@@ -239,6 +275,24 @@ body {
   align-items: center;
   padding: 8px 0;
   font-size: 15px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+.slider-header:first-of-type {
+  margin-top: 2px;
+}
+.slider-val {
+  color: #2f80ff;
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 input[type="range"] { width: 100%; }
@@ -294,8 +348,17 @@ body.is-fullscreen {
 
   <div class="settings-section">
     <div class="settings-section-title">Driving</div>
-    <label>Max Speed</label>
-    <input id="speedSlider" type="range" min="0.2" max="1" step="0.1">
+    <div class="slider-header">
+      <span>Max Speed</span>
+      <span class="slider-val" id="speedVal">100%</span>
+    </div>
+    <input id="speedSlider" type="range" min="0.2" max="1" step="0.05">
+
+    <div class="slider-header">
+      <span>Steering Gain</span>
+      <span class="slider-val" id="steeringGainVal">1.00x</span>
+    </div>
+    <input id="steeringGainSlider" type="range" min="0.1" max="1.5" step="0.05">
 
     <div class="toggle-row">
       <span>Invert Sideway</span>
@@ -383,6 +446,9 @@ const fullscreenBtn = document.getElementById("fullscreenBtn");
 const connectBtn = document.getElementById("connectBtn");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 const speedSlider = document.getElementById("speedSlider");
+const steeringGainSlider = document.getElementById("steeringGainSlider");
+const speedVal = document.getElementById("speedVal");
+const steeringGainVal = document.getElementById("steeringGainVal");
 const invertSideway = document.getElementById("invertSideway");
 const invertYaw = document.getElementById("invertYaw");
 const invertForward = document.getElementById("invertForward");
@@ -398,24 +464,41 @@ let rightJoyActive = false;
 /* ================= SETTINGS ================= */
 let appSettings = Object.assign({
   maxSpeed: 1.0,
+  steeringGain: 1.0,
   invertSideway: false,
   invertYaw: false,
   invertForward: false,
   cameraBG: false
 }, JSON.parse(localStorage.getItem("settings") || "{}"));
 
+function updateSliderLabels() {
+  if (speedVal) speedVal.textContent = Math.round(appSettings.maxSpeed * 100) + "%";
+  if (steeringGainVal) steeringGainVal.textContent = (+appSettings.steeringGain).toFixed(2) + "x";
+}
+
 speedSlider.value = appSettings.maxSpeed;
+steeringGainSlider.value = appSettings.steeringGain !== undefined ? appSettings.steeringGain : 1.0;
 invertSideway.checked = appSettings.invertSideway;
 invertYaw.checked = appSettings.invertYaw;
 invertForward.checked = appSettings.invertForward;
 cameraToggle.checked = appSettings.cameraBG;
+updateSliderLabels();
 
 function saveSettings() {
   localStorage.setItem("settings", JSON.stringify(appSettings));
 }
 
 /* ================= SETTINGS EVENTS ================= */
-speedSlider.oninput = e => { appSettings.maxSpeed = +e.target.value; saveSettings(); };
+speedSlider.oninput = e => {
+  appSettings.maxSpeed = +e.target.value;
+  updateSliderLabels();
+  saveSettings();
+};
+steeringGainSlider.oninput = e => {
+  appSettings.steeringGain = +e.target.value;
+  updateSliderLabels();
+  saveSettings();
+};
 invertSideway.onchange = e => { appSettings.invertSideway = e.target.checked; saveSettings(); };
 invertYaw.onchange = e => { appSettings.invertYaw = e.target.checked; saveSettings(); };
 invertForward.onchange = e => { appSettings.invertForward = e.target.checked; saveSettings(); };
@@ -507,9 +590,10 @@ setInterval(async () => {
   if (!rxChar || isWriting) return;
 
   const activeFwd = rightJoyActive ? forward : leftForward;
+  const steerGain = appSettings.steeringGain !== undefined ? appSettings.steeringGain : 1.0;
   const x = Math.round(Math.min(100, Math.max(-100, sideway * appSettings.maxSpeed * 100)));
   const y = Math.round(Math.min(100, Math.max(-100, activeFwd * appSettings.maxSpeed * 100)));
-  const z = Math.round(Math.min(100, Math.max(-100, yaw * appSettings.maxSpeed * 100)));
+  const z = Math.round(Math.min(100, Math.max(-100, yaw * appSettings.maxSpeed * steerGain * 100)));
 
   const packet = new TextEncoder().encode(`drive ${x},${y},${z}\n`);
   isWriting = true;
