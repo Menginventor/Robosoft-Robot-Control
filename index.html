@@ -2,7 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>ESP32 Robot Control</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>ANT-BOT Control v1.0</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -57,6 +60,19 @@ body {
 #battery {
   margin-top: 6px;
   font-size: 15px;
+}
+
+.version-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(47, 128, 255, 0.2);
+  color: #4da3ff;
+  border: 1px solid rgba(47, 128, 255, 0.4);
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 /* ===== JOYSTICKS ===== */
@@ -188,7 +204,7 @@ input[type="range"] { width: 100%; }
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings</div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -230,7 +246,7 @@ input[type="range"] { width: 100%; }
 <div id="top">
   <button id="menuBtn">☰</button>
   <button id="fullscreenBtn">⛶</button>
-  <div id="status" class="status-disconnected">Disconnected</div>
+  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.0</span></div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
 
@@ -246,6 +262,17 @@ input[type="range"] { width: 100%; }
 </div>
 
 <script>
+/* ================= VERSION & CACHE MANAGEMENT ================= */
+const APP_VERSION = "1.0";
+if (localStorage.getItem("app_version") !== APP_VERSION) {
+  localStorage.setItem("app_version", APP_VERSION);
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(r => r.unregister());
+    });
+  }
+}
+
 /* ================= BLE CONFIG ================= */
 const SERVICE = "12345678-1234-1234-1234-1234567890ab";
 const RX = "12345678-1234-1234-1234-1234567890ac";
@@ -340,10 +367,10 @@ connectBtn.onclick = async () => {
     await txChar.startNotifications();
     txChar.addEventListener("characteristicvaluechanged", onNotify);
 
-    statusEl.textContent = "Connected";
+    statusEl.innerHTML = `Connected <span class="version-badge">v${APP_VERSION}</span>`;
     statusEl.className = "status-connected";
   } catch (e) {
-    statusEl.textContent = "Disconnected";
+    statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
     statusEl.className = "status-disconnected";
     console.error(e);
   }

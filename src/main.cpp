@@ -14,7 +14,6 @@ bool roverDetected = false;
 
 // =================================================
 // BLE Configuration
-#define BLE_DEVICE_NAME   "ANT-BOT_09EA"
 #define BLE_SERVICE_UUID  "12345678-1234-1234-1234-1234567890ab"
 #define BLE_RX_UUID       "12345678-1234-1234-1234-1234567890ac"
 #define BLE_TX_UUID       "12345678-1234-1234-1234-1234567890ad"
@@ -38,6 +37,7 @@ unsigned long lastStatusTime = 0;
 const unsigned long DISPLAY_PERIOD_MS = 200;
 unsigned long lastDisplayTime = 0;
 int lastBleState = -1; // -1 forces initial full render
+String bleDeviceName = "ANT-BOT";
 
 // ---------------- State ----------------
 bool driverEnabled = false;
@@ -133,11 +133,17 @@ void setup() {
   }
   stop_all();
 
-  // ---- BLE Init ----
-  Serial.print("[BLE NAME] ");
-  Serial.println(BLE_DEVICE_NAME);
+  // ---- BLE Device Name with last digits of MAC address ----
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_BT);
+  char lastDigits[8];
+  snprintf(lastDigits, sizeof(lastDigits), "%02X%02X", mac[4], mac[5]);
+  bleDeviceName = "ANT-BOT_" + String(lastDigits);
 
-  BLEDevice::init(BLE_DEVICE_NAME);
+  Serial.print("[BLE NAME] ");
+  Serial.println(bleDeviceName);
+
+  BLEDevice::init(bleDeviceName.c_str());
 
   BLEServer *server = BLEDevice::createServer();
   server->setCallbacks(new ServerCB());
@@ -239,7 +245,7 @@ void updateDisplay() {
   // Line 1: BLE Device Name
   M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(5, 3);
-  M5.Lcd.printf("DEV: %s    ", BLE_DEVICE_NAME);
+  M5.Lcd.printf("DEV: %s    ", bleDeviceName.c_str());
 
   // Line 2: BLE Connection State
   M5.Lcd.setTextSize(2);
