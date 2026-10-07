@@ -59,22 +59,39 @@ body {
   font-size: 15px;
 }
 
-/* ===== JOYSTICK ===== */
-#joysticks {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 10;
-}
-
+/* ===== JOYSTICKS ===== */
 .joy {
-  width: 180px;
-  height: 180px;
+  position: fixed;
+  bottom: 24px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   background: rgba(255,255,255,0.035);
   border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(2px);
-  position: relative;
+  z-index: 10;
+  user-select: none;
+  touch-action: none;
+}
+
+.joy-left {
+  left: 20px;
+}
+
+.joy-right {
+  right: 20px;
+}
+
+.joy-label {
+  position: absolute;
+  top: 14px;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+  pointer-events: none;
 }
 
 .knob {
@@ -87,6 +104,7 @@ body {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* ===== OVERLAY ===== */
@@ -187,6 +205,11 @@ input[type="range"] { width: 100%; }
     </div>
 
     <div class="toggle-row">
+      <span>Invert Yaw</span>
+      <input id="invertYaw" type="checkbox">
+    </div>
+
+    <div class="toggle-row">
       <span>Invert Throttle</span>
       <input id="invertThrottle" type="checkbox">
     </div>
@@ -211,11 +234,15 @@ input[type="range"] { width: 100%; }
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
 
-<!-- ===== JOYSTICK ===== -->
-<div id="joysticks">
-  <div class="joy" id="joyDrive">
-    <div class="knob"></div>
-  </div>
+<!-- ===== JOYSTICKS ===== -->
+<div class="joy joy-left" id="joyYaw">
+  <div class="joy-label">YAW</div>
+  <div class="knob"></div>
+</div>
+
+<div class="joy joy-right" id="joyDrive">
+  <div class="joy-label">DRIVE</div>
+  <div class="knob"></div>
 </div>
 
 <script>
@@ -236,17 +263,20 @@ const cameraBG = document.getElementById("cameraBG");
 /* ================= CONTROL STATE ================= */
 let throttle = 0;
 let steering = 0;
+let yaw = 0;
 
 /* ================= SETTINGS ================= */
 let appSettings = Object.assign({
   maxSpeed: 1.0,
   invertSteering: false,
+  invertYaw: false,
   invertThrottle: false,
   cameraBG: false
 }, JSON.parse(localStorage.getItem("settings") || "{}"));
 
 speedSlider.value = appSettings.maxSpeed;
 invertSteer.checked = appSettings.invertSteering;
+invertYaw.checked = appSettings.invertYaw;
 invertThrottle.checked = appSettings.invertThrottle;
 cameraToggle.checked = appSettings.cameraBG;
 
@@ -257,6 +287,7 @@ function saveSettings() {
 /* ================= SETTINGS EVENTS ================= */
 speedSlider.oninput = e => { appSettings.maxSpeed = +e.target.value; saveSettings(); };
 invertSteer.onchange = e => { appSettings.invertSteering = e.target.checked; saveSettings(); };
+invertYaw.onchange = e => { appSettings.invertYaw = e.target.checked; saveSettings(); };
 invertThrottle.onchange = e => { appSettings.invertThrottle = e.target.checked; saveSettings(); };
 cameraToggle.onchange = e => toggleCamera(e.target.checked);
 
@@ -331,8 +362,11 @@ function onNotify(e) {
 setInterval(() => {
   if (!rxChar) return;
 
-  const L = Math.round((throttle - steering) * appSettings.maxSpeed * 255);
-  const R = Math.round((throttle + steering) * appSettings.maxSpeed * 255);
+  const turn = steering + yaw;
+  const rawL = (throttle - turn) * appSettings.maxSpeed * 255;
+  const rawR = (throttle + turn) * appSettings.maxSpeed * 255;
+  const L = Math.round(Math.min(255, Math.max(-255, rawL)));
+  const R = Math.round(Math.min(255, Math.max(-255, rawR)));
 
   rxChar.writeValue(
     new TextEncoder().encode(`motor ${L},${R}\n`)
@@ -350,7 +384,7 @@ function handleStatus(msg) {
 }
 
 /* ================= RELATIVE JOYSTICK ================= */
-function setupJoystick(el) {
+function setupJoystick(el, onMove, onRelease) {
   const knob = el.querySelector(".knob");
   const r = el.clientWidth / 2;
   const kr = knob.clientWidth / 2;
@@ -364,8 +398,7 @@ function setupJoystick(el) {
     const px = Math.cos(a) * d;
     const py = Math.sin(a) * d;
     knob.style.transform = `translate(${px}px,${py}px) translate(-50%,-50%)`;
-    steering = appSettings.invertSteering ? px / maxDist : -px / maxDist;
-    throttle = appSettings.invertThrottle ? py / maxDist : -py / maxDist;
+    onMove(px / maxDist, py / maxDist);
   }
 
   el.addEventListener("pointerdown", e => {
@@ -375,11 +408,13 @@ function setupJoystick(el) {
     update(0, 0);
   });
   el.addEventListener("pointermove", e => { if (active) update(e.clientX - sx, e.clientY - sy); });
-  el.addEventListener("pointerup", () => {
+  const end = () => {
     active = false;
     knob.style.transform = "translate(-50%,-50%)";
-    throttle = steering = 0;
-  });
+    onRelease();
+  };
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", end);
 }
 
 /* ================= FULLSCREEN (FIXED) ================= */
@@ -392,7 +427,25 @@ fullscreenBtn.onclick = () => {
 };
 
 /* ================= INIT ================= */
-setupJoystick(document.getElementById("joyDrive"));
+// Left Joystick: Yaw
+setupJoystick(
+  document.getElementById("joyYaw"),
+  (nx, ny) => {
+    yaw = appSettings.invertYaw ? nx : -nx;
+  },
+  () => { yaw = 0; }
+);
+
+// Right Joystick: Drive (Throttle & Steering)
+setupJoystick(
+  document.getElementById("joyDrive"),
+  (nx, ny) => {
+    steering = appSettings.invertSteering ? nx : -nx;
+    throttle = appSettings.invertThrottle ? ny : -ny;
+  },
+  () => { throttle = 0; steering = 0; }
+);
+
 if (appSettings.cameraBG) toggleCamera(true);
 </script>
 
