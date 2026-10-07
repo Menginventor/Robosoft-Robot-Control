@@ -429,7 +429,7 @@ fullscreenBtn.onclick = () => {
 setupJoystick(
   document.getElementById("joyYaw"),
   (nx, ny) => {
-    yaw = appSettings.invertYaw ? nx : -nx;
+    yaw = appSettings.invertYaw ? -nx : nx;
   },
   () => { yaw = 0; }
 );

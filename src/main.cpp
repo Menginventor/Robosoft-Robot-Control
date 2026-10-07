@@ -361,21 +361,44 @@ bool checkRoverI2C() {
 
 // =================================================
 // RoverC Omnidirectional Mecanum Motor Control
-// x: sideway / strafe (-100..100)
-// y: forward / reverse (-100..100)
-// z: yaw / steering   (-100..100)
+// Wheel Hardware Mapping on RoverC (register 0x00):
+// buf[0]: Front Left  (FL)
+// buf[1]: Front Right (FR)
+// buf[2]: Rear Right  (RR)
+// buf[3]: Rear Left   (RL)
+//
+// True Mecanum Kinematics:
+// x: sideway / strafe (-100..100) -> FL+, FR-, RR+, RL-
+// y: forward / reverse (-100..100) -> FL+, FR+, RR+, RL+
+// z: yaw / steering   (-100..100) -> FL+, FR-, RR-, RL+
 void applyMotors(int x, int y, int z) {
   if (abs(x) < 3) x = 0;
   if (abs(y) < 3) y = 0;
   if (abs(z) < 3) z = 0;
 
-  roverc.setSpeed((int8_t)constrain(x, -100, 100),
-                  (int8_t)constrain(y, -100, 100),
-                  (int8_t)constrain(z, -100, 100));
+  int fl = y + x + z;
+  int fr = y - x - z;
+  int rr = y + x - z;
+  int rl = y - x + z;
+
+  int8_t buf[4];
+  buf[0] = (int8_t)constrain(fl, -100, 100); // Front Left
+  buf[1] = (int8_t)constrain(fr, -100, 100); // Front Right
+  buf[2] = (int8_t)constrain(rr, -100, 100); // Rear Right
+  buf[3] = (int8_t)constrain(rl, -100, 100); // Rear Left
+
+  Wire.beginTransmission(0x38);
+  Wire.write(0x00);
+  Wire.write((uint8_t*)buf, 4);
+  Wire.endTransmission();
 }
 
 void stop_all() {
-  roverc.setSpeed(0, 0, 0);
+  int8_t buf[4] = {0, 0, 0, 0};
+  Wire.beginTransmission(0x38);
+  Wire.write(0x00);
+  Wire.write((uint8_t*)buf, 4);
+  Wire.endTransmission();
 }
 
 // =================================================
