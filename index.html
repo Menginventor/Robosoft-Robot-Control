@@ -62,6 +62,11 @@ body {
   z-index: 20;
 }
 
+#menuBtn svg, #fullscreenBtn svg {
+  pointer-events: none;
+  display: block;
+}
+
 #menuBtn:active, #fullscreenBtn:active {
   background: rgba(255, 255, 255, 0.22);
   transform: scale(0.92);
@@ -299,7 +304,14 @@ body.is-fullscreen {
 <!-- ===== TOP BAR ===== -->
 <div id="top">
   <button id="menuBtn">☰</button>
-  <button id="fullscreenBtn">⛶</button>
+  <button id="fullscreenBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 3 21 3 21 9"></polyline>
+      <polyline points="9 21 3 21 3 15"></polyline>
+      <line x1="21" y1="3" x2="14" y2="10"></line>
+      <line x1="3" y1="21" x2="10" y2="14"></line>
+    </svg>
+  </button>
   <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.0.2</span></div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
@@ -611,14 +623,14 @@ async function toggleFullscreen() {
     }
 
     if (entered) {
-      showToast("Fullscreen Active ⛶");
+      showToast("Fullscreen Active");
     } else {
       // iOS iPhone fallback where element Fullscreen API is disabled by Apple
       document.body.classList.add("is-fullscreen");
       window.scrollTo(0, 1);
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       if (isIOS) {
-        showToast("iOS: Tap Share ⎋ > Add to Home Screen for borderless fullscreen", 4500);
+        showToast("iOS: Tap Share > Add to Home Screen for borderless fullscreen", 4500);
       } else {
         showToast("Fullscreen Mode");
       }
@@ -652,11 +664,15 @@ function onFullscreenClick(e) {
 fullscreenBtn.addEventListener("click", onFullscreenClick);
 fullscreenBtn.addEventListener("touchend", onFullscreenClick);
 
+const FS_ICON_ENTER = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+const FS_ICON_EXIT  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>';
+
 function updateFsIcon() {
-  fullscreenBtn.textContent = isFullscreen() ? "🗗" : "⛶";
+  fullscreenBtn.innerHTML = isFullscreen() ? FS_ICON_EXIT : FS_ICON_ENTER;
 }
 document.addEventListener("fullscreenchange", updateFsIcon);
 document.addEventListener("webkitfullscreenchange", updateFsIcon);
+updateFsIcon();
 
 /* ================= INIT ================= */
 // Left Joystick: Controls steering (Yaw) + Forward (when Right Joy is not touched)
