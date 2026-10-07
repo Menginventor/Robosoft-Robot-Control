@@ -208,15 +208,16 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--surface-elevated);
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--accent-badge-border);
   border-radius: 12px;
-  color: var(--text-main);
+  color: var(--accent);
   font-size: 20px;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 20;
 }
 
@@ -226,8 +227,11 @@ body {
 }
 
 #menuBtn:active, #fullscreenBtn:active {
-  background: var(--surface-elevated-active);
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
   transform: scale(0.92);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 #menuBtn { left: 12px; }
