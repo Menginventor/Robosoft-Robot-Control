@@ -1,4 +1,4 @@
-# Robosoft-Robot-Control
+# Robosoft-Robot-Control `v1.0`
 
 Web Bluetooth (BLE) robot controller for **M5StickC / M5StickC Plus** mounted on the **M5Stack RoverC** base.
 
