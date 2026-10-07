@@ -5,8 +5,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ANT-BOT Control v1.01</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111111">
+<title>ANT-BOT Control v1.0.2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
 <style>
 body {
@@ -40,11 +44,27 @@ body {
 
 #menuBtn, #fullscreenBtn {
   position: absolute;
-  top: 12px;
-  background: none;
-  border: none;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
   color: #eee;
-  font-size: 22px;
+  font-size: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 20;
+}
+
+#menuBtn:active, #fullscreenBtn:active {
+  background: rgba(255, 255, 255, 0.22);
+  transform: scale(0.92);
 }
 
 #menuBtn { left: 12px; }
@@ -194,6 +214,40 @@ body {
 }
 
 input[type="range"] { width: 100%; }
+
+/* ===== IOS PSEUDO-FULLSCREEN & TOAST ===== */
+body.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: rgba(22, 22, 26, 0.95);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 1000;
+  max-width: 90%;
+  text-align: center;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 </style>
 </head>
 
@@ -204,7 +258,7 @@ input[type="range"] { width: 100%; }
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings <span class="version-badge">v1.01</span></div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.2</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -246,7 +300,7 @@ input[type="range"] { width: 100%; }
 <div id="top">
   <button id="menuBtn">☰</button>
   <button id="fullscreenBtn">⛶</button>
-  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.01</span></div>
+  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.0.2</span></div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
 
@@ -261,9 +315,11 @@ input[type="range"] { width: 100%; }
   <div class="knob"></div>
 </div>
 
+<div id="toast"></div>
+
 <script>
 /* ================= VERSION & CACHE MANAGEMENT ================= */
-const APP_VERSION = "1.01";
+const APP_VERSION = "1.0.2";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -486,40 +542,115 @@ function isFullscreen() {
     document.fullscreenElement ||
     document.webkitFullscreenElement ||
     document.mozFullScreenElement ||
-    document.msFullscreenElement
+    document.msFullscreenElement ||
+    document.body.classList.contains("is-fullscreen")
   );
 }
 
+function showToast(msg, duration = 3000) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove("show"), duration);
+}
+
 async function toggleFullscreen() {
-  try {
-    const doc = document.documentElement;
-    if (!isFullscreen()) {
-      if (doc.requestFullscreen) {
-        await doc.requestFullscreen();
-      } else if (doc.webkitRequestFullscreen) {
-        await doc.webkitRequestFullscreen();
-      } else if (doc.mozRequestFullScreen) {
-        await doc.mozRequestFullScreen();
-      } else if (doc.msRequestFullscreen) {
-        await doc.msRequestFullscreen();
+  const doc = document.documentElement;
+  const isFs = isFullscreen();
+
+  if (!isFs) {
+    let entered = false;
+
+    // Standard Fullscreen API (Android Chrome, Edge, etc.)
+    if (doc.requestFullscreen) {
+      try {
+        await doc.requestFullscreen({ navigationUI: "hide" });
+        entered = true;
+      } catch (err) {
+        try {
+          await doc.requestFullscreen();
+          entered = true;
+        } catch (err2) {
+          console.warn("doc.requestFullscreen fallback failed:", err2);
+        }
       }
+    }
+
+    // Body fallback
+    if (!entered && document.body.requestFullscreen) {
+      try {
+        await document.body.requestFullscreen({ navigationUI: "hide" });
+        entered = true;
+      } catch (err) {
+        try {
+          await document.body.requestFullscreen();
+          entered = true;
+        } catch (err2) {}
+      }
+    }
+
+    // WebKit prefix (iPadOS / Safari)
+    if (!entered && doc.webkitRequestFullscreen) {
+      try {
+        doc.webkitRequestFullscreen();
+        entered = true;
+      } catch (err) {}
+    }
+    if (!entered && document.body.webkitRequestFullscreen) {
+      try {
+        document.body.webkitRequestFullscreen();
+        entered = true;
+      } catch (err) {}
+    }
+
+    // Orientation lock if available
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("landscape").catch(() => {});
+    }
+
+    if (entered) {
+      showToast("Fullscreen Active ⛶");
     } else {
+      // iOS iPhone fallback where element Fullscreen API is disabled by Apple
+      document.body.classList.add("is-fullscreen");
+      window.scrollTo(0, 1);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS) {
+        showToast("iOS: Tap Share ⎋ > Add to Home Screen for borderless fullscreen", 4500);
+      } else {
+        showToast("Fullscreen Mode");
+      }
+    }
+  } else {
+    document.body.classList.remove("is-fullscreen");
+    try {
       if (document.exitFullscreen) {
         await document.exitFullscreen();
       } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        await document.mozCancelFullScreen();
-      } else if (document.msExitFullscreen) {
-        await document.msExitFullscreen();
+        document.webkitExitFullscreen();
       }
+    } catch (e) {}
+    if (screen.orientation && screen.orientation.unlock) {
+      screen.orientation.unlock().catch(() => {});
     }
-  } catch (err) {
-    console.warn("Fullscreen toggle warning:", err);
+    showToast("Exited Fullscreen");
   }
+  updateFsIcon();
 }
 
-fullscreenBtn.addEventListener("click", toggleFullscreen);
+let lastFsToggle = 0;
+function onFullscreenClick(e) {
+  if (e && e.cancelable) e.preventDefault();
+  const now = Date.now();
+  if (now - lastFsToggle < 350) return;
+  lastFsToggle = now;
+  toggleFullscreen();
+}
+
+fullscreenBtn.addEventListener("click", onFullscreenClick);
+fullscreenBtn.addEventListener("touchend", onFullscreenClick);
 
 function updateFsIcon() {
   fullscreenBtn.textContent = isFullscreen() ? "🗗" : "⛶";
