@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#111111" id="themeColorMeta">
-<title>ANT-BOT Control v1.0.5</title>
+<title>ANT-BOT Control v1.0.6</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
 <style>
@@ -419,7 +419,9 @@ body {
   background: var(--surface-elevated-active);
 }
 
-#battery {
+#battery,
+#telemetry,
+.telemetry-display {
   margin-top: 6px;
   font-size: 15px;
   color: var(--text-muted);
@@ -840,7 +842,7 @@ body.is-fullscreen {
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.5</span></div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.6</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -918,6 +920,8 @@ body.is-fullscreen {
       <span>Invert Forward</span>
       <input id="invertForward" type="checkbox">
     </div>
+
+    <button type="button" class="secondary-btn" id="resetDefaultsBtn" style="margin-top: 14px; width: 100%;">Reset Driving Defaults</button>
   </div>
 
   <div class="settings-section">
@@ -954,7 +958,7 @@ body.is-fullscreen {
         <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
       </svg>
       <span id="blePillText">Not connect</span>
-      <span class="version-badge">v1.0.5</span>
+      <span class="version-badge">v1.0.6</span>
     </button>
 
     <!-- Quick Connection Popover -->
@@ -963,14 +967,14 @@ body.is-fullscreen {
         <span class="popover-title" id="popoverDeviceName">ANT-BOT</span>
         <span class="popover-status">Connected</span>
       </div>
-      <div class="popover-info" id="popoverBattery">V: --.- V | I: ---.- mA</div>
+      <div class="popover-info" id="popoverBattery">Telemetry: --</div>
       <div class="popover-actions">
         <button id="popoverDisconnectBtn" class="popover-btn danger">Disconnect</button>
         <button id="popoverSettingsBtn" class="popover-btn secondary">Settings ⚙</button>
       </div>
     </div>
   </div>
-  <div id="battery">V: --.- V | I: ---.- mA</div>
+  <div id="battery">Telemetry: --</div>
 </div>
 
 <!-- ===== JOYSTICKS ===== -->
@@ -988,7 +992,7 @@ body.is-fullscreen {
 
 <script>
 /* ================= VERSION & CACHE MANAGEMENT ================= */
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -1014,9 +1018,11 @@ const blePillText = document.getElementById("blePillText");
 const blePopover = document.getElementById("blePopover");
 const popoverDeviceName = document.getElementById("popoverDeviceName");
 const popoverBattery = document.getElementById("popoverBattery");
+const popoverTelemetry = popoverBattery;
 const popoverDisconnectBtn = document.getElementById("popoverDisconnectBtn");
 const popoverSettingsBtn = document.getElementById("popoverSettingsBtn");
 const batteryEl = document.getElementById("battery");
+const telemetryEl = batteryEl;
 const cameraBG = document.getElementById("cameraBG");
 const menuBtn = document.getElementById("menuBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
@@ -1038,16 +1044,31 @@ let leftForward = 0;   // forward/reverse from Left Joystick when Right Joy is i
 let rightJoyActive = false;
 
 /* ================= SETTINGS ================= */
-let appSettings = Object.assign({
-  maxSpeed: 1.0,
-  steeringGain: 1.0,
+const DEFAULT_SETTINGS = {
+  maxSpeed: 1.0,      // 100%
+  steeringGain: 1.0,  // 1.00x
   invertSideway: false,
   invertYaw: false,
   invertForward: false,
   cameraBG: false,
   tone: "dark",
   theme: "blue"
-}, JSON.parse(localStorage.getItem("settings") || "{}"));
+};
+
+let savedSettings = {};
+try {
+  savedSettings = JSON.parse(localStorage.getItem("settings") || "{}");
+} catch (_) {}
+
+let appSettings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
+
+// Ensure maxSpeed and steeringGain default to 1.0 (100% / 1.00x) if missing or invalid
+if (typeof appSettings.maxSpeed !== "number" || isNaN(appSettings.maxSpeed)) {
+  appSettings.maxSpeed = DEFAULT_SETTINGS.maxSpeed;
+}
+if (typeof appSettings.steeringGain !== "number" || isNaN(appSettings.steeringGain)) {
+  appSettings.steeringGain = DEFAULT_SETTINGS.steeringGain;
+}
 
 function applyPersonalization() {
   const tone = appSettings.tone || "dark";
@@ -1148,7 +1169,7 @@ const speedSlider = createCustomSlider(document.getElementById("speedSlider"), {
   min: 0.2,
   max: 1.0,
   step: 0.05,
-  initialValue: appSettings.maxSpeed,
+  initialValue: typeof appSettings.maxSpeed === "number" && !isNaN(appSettings.maxSpeed) ? appSettings.maxSpeed : DEFAULT_SETTINGS.maxSpeed,
   onInput: val => {
     appSettings.maxSpeed = val;
     updateSliderLabels();
@@ -1160,7 +1181,7 @@ const steeringGainSlider = createCustomSlider(document.getElementById("steeringG
   min: 0.1,
   max: 1.5,
   step: 0.05,
-  initialValue: appSettings.steeringGain !== undefined ? appSettings.steeringGain : 1.0,
+  initialValue: typeof appSettings.steeringGain === "number" && !isNaN(appSettings.steeringGain) ? appSettings.steeringGain : DEFAULT_SETTINGS.steeringGain,
   onInput: val => {
     appSettings.steeringGain = val;
     updateSliderLabels();
@@ -1179,6 +1200,27 @@ invertSideway.onchange = e => { appSettings.invertSideway = e.target.checked; sa
 invertYaw.onchange = e => { appSettings.invertYaw = e.target.checked; saveSettings(); };
 invertForward.onchange = e => { appSettings.invertForward = e.target.checked; saveSettings(); };
 cameraToggle.onchange = e => toggleCamera(e.target.checked);
+
+const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
+if (resetDefaultsBtn) {
+  resetDefaultsBtn.addEventListener("click", () => {
+    appSettings.maxSpeed = DEFAULT_SETTINGS.maxSpeed;
+    appSettings.steeringGain = DEFAULT_SETTINGS.steeringGain;
+    appSettings.invertSideway = DEFAULT_SETTINGS.invertSideway;
+    appSettings.invertYaw = DEFAULT_SETTINGS.invertYaw;
+    appSettings.invertForward = DEFAULT_SETTINGS.invertForward;
+
+    speedSlider.value = appSettings.maxSpeed;
+    steeringGainSlider.value = appSettings.steeringGain;
+    invertSideway.checked = appSettings.invertSideway;
+    invertYaw.checked = appSettings.invertYaw;
+    invertForward.checked = appSettings.invertForward;
+
+    updateSliderLabels();
+    saveSettings();
+    showToast("Driving controls reset to defaults (100% / 1.00x)");
+  });
+}
 
 document.querySelectorAll("#toneControl .segment-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -1241,8 +1283,8 @@ function updateBleUi(connected) {
   } else {
     blePill.className = "ble-pill disconnected";
     blePillText.textContent = "Not connect";
-    batteryEl.textContent = "V: --.- V | I: ---.- mA";
-    popoverBattery.textContent = "V: --.- V | I: ---.- mA";
+    batteryEl.textContent = "Telemetry: --";
+    popoverBattery.textContent = "Telemetry: --";
     blePopover.style.display = "none";
     connectBtn.style.display = "block";
     disconnectBtn.style.display = "none";
@@ -1373,14 +1415,75 @@ setInterval(async () => {
   }
 }, 35);
 
-/* ================= STATUS PARSER ================= */
+/* ================= TELEMETRY / STATUS PARSER ================= */
+function formatTelemetryValue(key, rawVal) {
+  const upperKey = key.toUpperCase();
+  const num = Number(rawVal);
+  const isNumeric = !isNaN(num) && rawVal.trim() !== "";
+
+  if (isNumeric) {
+    if (upperKey === "V" || upperKey === "VOLT" || upperKey === "VOLTAGE") {
+      return `${key}: ${num.toFixed(2)} V`;
+    }
+    if (upperKey === "I" || upperKey === "CUR" || upperKey === "CURRENT") {
+      return `${key}: ${num.toFixed(1)} mA`;
+    }
+    if (upperKey === "BAT" || upperKey === "BATT" || upperKey === "BATTERY" || upperKey === "SOC") {
+      return `${key}: ${Math.round(num)}%`;
+    }
+    if (upperKey === "TEMP" || upperKey === "TEMPERATURE") {
+      return `${key}: ${num.toFixed(1)}°C`;
+    }
+    if (upperKey === "RPM") {
+      return `${key}: ${Math.round(num)} RPM`;
+    }
+    if (upperKey === "DIST" || upperKey === "DISTANCE") {
+      return `${key}: ${num.toFixed(1)} cm`;
+    }
+    if (!Number.isInteger(num)) {
+      return `${key}: ${num.toFixed(2)}`;
+    }
+  }
+
+  return `${key}: ${rawVal}`;
+}
+
 function handleStatus(msg) {
-  const v = msg.match(/V=([-\d.]+)/);
-  const i = msg.match(/I=([-\d.]+)/);
-  if (v && i) {
-    const text = `V: ${(+v[1]).toFixed(2)} V | I: ${(+i[1]).toFixed(1)} mA`;
-    batteryEl.textContent = text;
-    if (popoverBattery) popoverBattery.textContent = text;
+  if (!msg || typeof msg !== "string") return;
+  const raw = msg.trim();
+  if (!raw) return;
+
+  let displayText = "";
+
+  // 1. JSON telemetry object
+  if (raw.startsWith("{") && raw.endsWith("}")) {
+    try {
+      const obj = JSON.parse(raw);
+      const parts = [];
+      for (const [k, v] of Object.entries(obj)) {
+        parts.push(formatTelemetryValue(k, String(v)));
+      }
+      if (parts.length > 0) displayText = parts.join(" | ");
+    } catch (_) {}
+  }
+
+  // 2. Key-Value pairs (e.g. "status V=4.12 I=120.5", "temp=25 hum=60", "RPM: 1200")
+  if (!displayText) {
+    const clean = raw.replace(/^(status|telemetry|data|info)[:\s]+/i, "").trim();
+    const kvRegex = /([a-zA-Z0-9_#$@.-]+)\s*[:=]\s*([^\s,;|]+)/g;
+    const matches = [...clean.matchAll(kvRegex)];
+
+    if (matches.length > 0) {
+      displayText = matches.map(m => formatTelemetryValue(m[1], m[2])).join(" | ");
+    } else {
+      // 3. Fallback for arbitrary/plain telemetry text
+      displayText = clean;
+    }
+  }
+
+  if (displayText) {
+    batteryEl.textContent = displayText;
+    if (popoverBattery) popoverBattery.textContent = displayText;
   }
 }
 
