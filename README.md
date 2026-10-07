@@ -31,7 +31,7 @@ Access the live web controller here:
 ---
 
 ## 📡 BLE Specifications
-- **Device Name**: `ANT-BOT_09EA`
+- **Device Name**: `ANT-BOT_<XXXX>` *(Dynamic unique name based on device's MAC address suffix, e.g. `ANT-BOT_09EA`)*
 - **Service UUID**: `12345678-1234-1234-1234-1234567890ab`
 - **RX UUID (Write)**: `12345678-1234-1234-1234-1234567890ac`
 - **TX UUID (Notify)**: `12345678-1234-1234-1234-1234567890ad`
@@ -54,5 +54,5 @@ Access the live web controller here:
    npx serve .
    ```
 2. Open the menu (☰) in the top-left corner and click **Connect to BLE**.
-3. Select **`ANT-BOT_09EA`** from the browser popup.
+3. Select your device (**`ANT-BOT_<XXXX>`**, e.g. `ANT-BOT_09EA`) from the browser popup (the exact 4-character ID is shown on the top line of the M5StickC display).
 4. Drive with the on-screen joystick!
