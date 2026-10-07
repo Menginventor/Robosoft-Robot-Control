@@ -42,11 +42,15 @@ Access the live web controller here:
 ## 💻 Getting Started
 
 ### 1. Firmware (PlatformIO)
-1. Open this repository in VS Code with PlatformIO extension installed.
+All firmware source code and configurations are organized in the [`firmware/`](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/firmware) directory.
+
+1. Open this repository in VS Code with the PlatformIO extension installed (or `cd firmware`).
 2. Connect your M5StickC via USB-C.
 3. Build and upload:
    ```bash
    pio run --target upload
+   # or:
+   cd firmware && pio run --target upload
    ```
 
 ### 2. Web Controller
