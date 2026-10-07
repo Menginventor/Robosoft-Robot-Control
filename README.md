@@ -35,6 +35,7 @@ Access the live web controller here:
 - **Service UUID**: `12345678-1234-1234-1234-1234567890ab`
 - **RX UUID (Write)**: `12345678-1234-1234-1234-1234567890ac`
 - **TX UUID (Notify)**: `12345678-1234-1234-1234-1234567890ad`
+- 📖 **Full Protocol Specification**: See [BLE_PROTOCOL.md](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/BLE_PROTOCOL.md) for command framing, packet rates, Mecanum kinematics mapping, and Python/JS client examples.
 
 ---
 

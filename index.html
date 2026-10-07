@@ -230,6 +230,10 @@ body {
   .primary-btn, .secondary-btn, .danger-btn {
     padding: 8px;
   }
+  .custom-slider {
+    margin: 6px 12px 10px 12px;
+    height: 28px;
+  }
 }
 
 .settings-header {
@@ -299,7 +303,7 @@ body {
   align-items: center;
   font-size: 14px;
   margin-top: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 .slider-header:first-of-type {
   margin-top: 2px;
@@ -311,7 +315,67 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-input[type="range"] { width: 100%; }
+.custom-slider {
+  position: relative;
+  width: calc(100% - 24px);
+  margin: 10px 12px 14px 12px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  touch-action: pan-y;
+  cursor: default;
+}
+
+.custom-slider .slider-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  position: relative;
+  pointer-events: none;
+}
+
+.custom-slider .slider-fill {
+  height: 100%;
+  width: 0%;
+  background: #2f80ff;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.custom-slider .slider-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 24px;
+  height: 24px;
+  background: #ffffff;
+  border: 2px solid #2f80ff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  touch-action: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.custom-slider .slider-thumb::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  bottom: -12px;
+  left: -12px;
+  right: -12px;
+}
+
+.custom-slider.dragging .slider-thumb,
+.custom-slider .slider-thumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow: 0 0 12px rgba(47, 128, 255, 0.7);
+}
 
 /* ===== IOS PSEUDO-FULLSCREEN & TOAST ===== */
 body.is-fullscreen {
@@ -369,13 +433,19 @@ body.is-fullscreen {
       <span>Max Speed</span>
       <span class="slider-val" id="speedVal">100%</span>
     </div>
-    <input id="speedSlider" type="range" min="0.2" max="1" step="0.05">
+    <div class="custom-slider" id="speedSlider">
+      <div class="slider-track"><div class="slider-fill"></div></div>
+      <div class="slider-thumb"></div>
+    </div>
 
     <div class="slider-header">
       <span>Steering Gain</span>
       <span class="slider-val" id="steeringGainVal">1.00x</span>
     </div>
-    <input id="steeringGainSlider" type="range" min="0.1" max="1.5" step="0.05">
+    <div class="custom-slider" id="steeringGainSlider">
+      <div class="slider-track"><div class="slider-fill"></div></div>
+      <div class="slider-thumb"></div>
+    </div>
 
     <div class="toggle-row">
       <span>Invert Sideway</span>
@@ -463,8 +533,6 @@ const fullscreenBtn = document.getElementById("fullscreenBtn");
 const connectBtn = document.getElementById("connectBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const speedSlider = document.getElementById("speedSlider");
-const steeringGainSlider = document.getElementById("steeringGainSlider");
 const speedVal = document.getElementById("speedVal");
 const steeringGainVal = document.getElementById("steeringGainVal");
 const invertSideway = document.getElementById("invertSideway");
@@ -494,29 +562,106 @@ function updateSliderLabels() {
   if (steeringGainVal) steeringGainVal.textContent = (+appSettings.steeringGain).toFixed(2) + "x";
 }
 
-speedSlider.value = appSettings.maxSpeed;
-steeringGainSlider.value = appSettings.steeringGain !== undefined ? appSettings.steeringGain : 1.0;
+function saveSettings() {
+  localStorage.setItem("settings", JSON.stringify(appSettings));
+}
+
+/* ================= DRAGGABLE SLIDER COMPONENT ================= */
+function createCustomSlider(containerEl, { min, max, step, initialValue, onInput }) {
+  const fill = containerEl.querySelector(".slider-fill");
+  const thumb = containerEl.querySelector(".slider-thumb");
+  let val = initialValue;
+  let isDragging = false;
+
+  function render(v) {
+    const clamped = Math.max(min, Math.min(max, v));
+    const pct = ((clamped - min) / (max - min)) * 100;
+    thumb.style.left = `${pct}%`;
+    fill.style.width = `${pct}%`;
+  }
+
+  function setValue(newVal, trigger = true) {
+    val = Math.max(min, Math.min(max, newVal));
+    render(val);
+    if (trigger && onInput) onInput(val);
+  }
+
+  function updateFromPointer(clientX) {
+    const rect = containerEl.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    let ratio = (clientX - rect.left) / rect.width;
+    ratio = Math.max(0, Math.min(1, ratio));
+    let rawVal = min + ratio * (max - min);
+    const steps = Math.round((rawVal - min) / step);
+    let steppedVal = min + steps * step;
+    steppedVal = +steppedVal.toFixed(4);
+    steppedVal = Math.max(min, Math.min(max, steppedVal));
+    setValue(steppedVal, true);
+  }
+
+  // ONLY dragging the thumb moves the slider (clicking the track does nothing)
+  thumb.addEventListener("pointerdown", e => {
+    isDragging = true;
+    containerEl.classList.add("dragging");
+    thumb.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  });
+
+  thumb.addEventListener("pointermove", e => {
+    if (!isDragging) return;
+    updateFromPointer(e.clientX);
+  });
+
+  const onEnd = e => {
+    if (isDragging) {
+      isDragging = false;
+      containerEl.classList.remove("dragging");
+      try { thumb.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  };
+  thumb.addEventListener("pointerup", onEnd);
+  thumb.addEventListener("pointercancel", onEnd);
+
+  setValue(initialValue, false);
+
+  return {
+    get value() { return val; },
+    set value(v) { setValue(v, false); }
+  };
+}
+
+const speedSlider = createCustomSlider(document.getElementById("speedSlider"), {
+  min: 0.2,
+  max: 1.0,
+  step: 0.05,
+  initialValue: appSettings.maxSpeed,
+  onInput: val => {
+    appSettings.maxSpeed = val;
+    updateSliderLabels();
+    saveSettings();
+  }
+});
+
+const steeringGainSlider = createCustomSlider(document.getElementById("steeringGainSlider"), {
+  min: 0.1,
+  max: 1.5,
+  step: 0.05,
+  initialValue: appSettings.steeringGain !== undefined ? appSettings.steeringGain : 1.0,
+  onInput: val => {
+    appSettings.steeringGain = val;
+    updateSliderLabels();
+    saveSettings();
+  }
+});
+
 invertSideway.checked = appSettings.invertSideway;
 invertYaw.checked = appSettings.invertYaw;
 invertForward.checked = appSettings.invertForward;
 cameraToggle.checked = appSettings.cameraBG;
 updateSliderLabels();
 
-function saveSettings() {
-  localStorage.setItem("settings", JSON.stringify(appSettings));
-}
-
 /* ================= SETTINGS EVENTS ================= */
-speedSlider.oninput = e => {
-  appSettings.maxSpeed = +e.target.value;
-  updateSliderLabels();
-  saveSettings();
-};
-steeringGainSlider.oninput = e => {
-  appSettings.steeringGain = +e.target.value;
-  updateSliderLabels();
-  saveSettings();
-};
 invertSideway.onchange = e => { appSettings.invertSideway = e.target.checked; saveSettings(); };
 invertYaw.onchange = e => { appSettings.invertYaw = e.target.checked; saveSettings(); };
 invertForward.onchange = e => { appSettings.invertForward = e.target.checked; saveSettings(); };
