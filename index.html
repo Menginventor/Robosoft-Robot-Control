@@ -200,18 +200,18 @@ input[type="range"] { width: 100%; }
     <input id="speedSlider" type="range" min="0.2" max="1" step="0.1">
 
     <div class="toggle-row">
-      <span>Invert Steering</span>
-      <input id="invertSteer" type="checkbox">
+      <span>Invert Sideway</span>
+      <input id="invertSideway" type="checkbox">
     </div>
 
     <div class="toggle-row">
-      <span>Invert Yaw</span>
+      <span>Invert Yaw (Steering)</span>
       <input id="invertYaw" type="checkbox">
     </div>
 
     <div class="toggle-row">
-      <span>Invert Throttle</span>
-      <input id="invertThrottle" type="checkbox">
+      <span>Invert Forward</span>
+      <input id="invertForward" type="checkbox">
     </div>
   </div>
 
@@ -236,12 +236,12 @@ input[type="range"] { width: 100%; }
 
 <!-- ===== JOYSTICKS ===== -->
 <div class="joy joy-left" id="joyYaw">
-  <div class="joy-label">YAW</div>
+  <div class="joy-label">STEER (YAW)</div>
   <div class="knob"></div>
 </div>
 
 <div class="joy joy-right" id="joyDrive">
-  <div class="joy-label">DRIVE</div>
+  <div class="joy-label">MOVE (FWD/SIDE)</div>
   <div class="knob"></div>
 </div>
 
@@ -261,23 +261,23 @@ const statusEl = document.getElementById("status");
 const cameraBG = document.getElementById("cameraBG");
 
 /* ================= CONTROL STATE ================= */
-let throttle = 0;
-let steering = 0;
-let yaw = 0;
+let forward = 0;   // forward/reverse (-1 to 1) from Right Joystick
+let sideway = 0;   // strafe left/right (-1 to 1) from Right Joystick
+let yaw = 0;       // steering / rotation (-1 to 1) from Left Joystick
 
 /* ================= SETTINGS ================= */
 let appSettings = Object.assign({
   maxSpeed: 1.0,
-  invertSteering: false,
+  invertSideway: false,
   invertYaw: false,
-  invertThrottle: false,
+  invertForward: false,
   cameraBG: false
 }, JSON.parse(localStorage.getItem("settings") || "{}"));
 
 speedSlider.value = appSettings.maxSpeed;
-invertSteer.checked = appSettings.invertSteering;
+invertSideway.checked = appSettings.invertSideway;
 invertYaw.checked = appSettings.invertYaw;
-invertThrottle.checked = appSettings.invertThrottle;
+invertForward.checked = appSettings.invertForward;
 cameraToggle.checked = appSettings.cameraBG;
 
 function saveSettings() {
@@ -286,9 +286,9 @@ function saveSettings() {
 
 /* ================= SETTINGS EVENTS ================= */
 speedSlider.oninput = e => { appSettings.maxSpeed = +e.target.value; saveSettings(); };
-invertSteer.onchange = e => { appSettings.invertSteering = e.target.checked; saveSettings(); };
+invertSideway.onchange = e => { appSettings.invertSideway = e.target.checked; saveSettings(); };
 invertYaw.onchange = e => { appSettings.invertYaw = e.target.checked; saveSettings(); };
-invertThrottle.onchange = e => { appSettings.invertThrottle = e.target.checked; saveSettings(); };
+invertForward.onchange = e => { appSettings.invertForward = e.target.checked; saveSettings(); };
 cameraToggle.onchange = e => toggleCamera(e.target.checked);
 
 /* ================= SETTINGS MODAL ================= */
@@ -362,14 +362,12 @@ function onNotify(e) {
 setInterval(() => {
   if (!rxChar) return;
 
-  const turn = steering + yaw;
-  const rawL = (throttle - turn) * appSettings.maxSpeed * 255;
-  const rawR = (throttle + turn) * appSettings.maxSpeed * 255;
-  const L = Math.round(Math.min(255, Math.max(-255, rawL)));
-  const R = Math.round(Math.min(255, Math.max(-255, rawR)));
+  const x = Math.round(Math.min(100, Math.max(-100, sideway * appSettings.maxSpeed * 100)));
+  const y = Math.round(Math.min(100, Math.max(-100, forward * appSettings.maxSpeed * 100)));
+  const z = Math.round(Math.min(100, Math.max(-100, yaw * appSettings.maxSpeed * 100)));
 
   rxChar.writeValue(
-    new TextEncoder().encode(`motor ${L},${R}\n`)
+    new TextEncoder().encode(`drive ${x},${y},${z}\n`)
   );
 }, 20);
 
@@ -427,7 +425,7 @@ fullscreenBtn.onclick = () => {
 };
 
 /* ================= INIT ================= */
-// Left Joystick: Yaw
+// Left Joystick: Only controls steering (Yaw)
 setupJoystick(
   document.getElementById("joyYaw"),
   (nx, ny) => {
@@ -436,14 +434,14 @@ setupJoystick(
   () => { yaw = 0; }
 );
 
-// Right Joystick: Drive (Throttle & Steering)
+// Right Joystick: Go forward and go sideway (Forward & Strafe)
 setupJoystick(
   document.getElementById("joyDrive"),
   (nx, ny) => {
-    steering = appSettings.invertSteering ? nx : -nx;
-    throttle = appSettings.invertThrottle ? ny : -ny;
+    sideway = appSettings.invertSideway ? -nx : nx;
+    forward = appSettings.invertForward ? ny : -ny;
   },
-  () => { throttle = 0; steering = 0; }
+  () => { forward = 0; sideway = 0; }
 );
 
 if (appSettings.cameraBG) toggleCamera(true);

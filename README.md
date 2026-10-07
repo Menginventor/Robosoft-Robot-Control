@@ -12,12 +12,14 @@ Access the live web controller here:
 
 ## 🚀 Features
 - **Web Bluetooth (BLE) Control**: Connect directly from your browser with no native app installation needed.
-- **Dual Virtual Joysticks**: Left joystick controls robot yaw (rotation in place), and right joystick controls throttle & steering with multi-touch support.
+- **Dual Virtual Joysticks (Mecanum Kinematics)**:
+  - **Left Joystick (`STEER`)**: Controls yaw rotation in place (turning left/right).
+  - **Right Joystick (`MOVE`)**: Controls 2D planar motion — forward/backward and sideway (strafe left/right).
 - **Telemetry Display**: Live battery voltage ($V$) and current ($mA$) readings streamed over BLE notifications.
 - **Safety Auto-Stop**: Watchdog timer stops the motors automatically if BLE connection or commands drop.
 - **Camera Background View**: Optional FPV-style camera feed backdrop while driving.
-- **Configurable Controls**: Adjustable max speed limits, invert steering, invert yaw, and invert throttle.
-- **Onboard Screen Status**: Displays live connection status, RoverC base detection, battery readings, and motor speeds on the M5StickC Plus LCD.
+- **Configurable Controls**: Adjustable max speed limits, invert sideway, invert yaw, and invert forward.
+- **Onboard Screen Status**: Displays live connection status, RoverC base detection, battery readings, and live 3-axis command values ($X, Y, Z$) on the M5StickC Plus LCD.
 
 ---
 

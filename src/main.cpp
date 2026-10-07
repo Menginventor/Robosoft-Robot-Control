@@ -44,8 +44,9 @@ bool driverEnabled = false;
 bool bleConnected  = false;
 
 unsigned long lastCommandTime = 0;
-int cmd_left  = 0;
-int cmd_right = 0;
+int cmd_x = 0; // sideway / strafe (-100..100)
+int cmd_y = 0; // forward / reverse (-100..100)
+int cmd_z = 0; // yaw / steering (-100..100)
 
 // ---------------- BLE ----------------
 BLECharacteristic *bleTx;
@@ -56,7 +57,7 @@ String rxBLE = "";
 void parseCommand(String cmd);
 void enableDriver();
 void disableDriver();
-void applyMotors(int left_speed, int right_speed);
+void applyMotors(int x, int y, int z);
 void stop_all();
 void pushStatus();
 void updateDisplay();
@@ -179,10 +180,12 @@ void loop() {
 
   // ---- Auto-stop watchdog ----
   if (AUTO_STOP_ENABLED && (millis() - lastCommandTime > AUTO_STOP_TIMEOUT_MS)) {
-    if (cmd_left != 0 || cmd_right != 0) {
+    if (cmd_x != 0 || cmd_y != 0 || cmd_z != 0) {
       Serial.println("[AUTO] Timeout -> stop");
-      cmd_left = 0;
-      cmd_right = 0;
+      cmd_x = 0;
+      cmd_y = 0;
+      cmd_z = 0;
+      stop_all();
     }
   }
 
@@ -191,7 +194,7 @@ void loop() {
     disableDriver();
   } else {
     enableDriver();
-    applyMotors(cmd_left, cmd_right);
+    applyMotors(cmd_x, cmd_y, cmd_z);
   }
 
   // ---- Screen UI update ----
@@ -259,14 +262,14 @@ void updateDisplay() {
   M5.Lcd.setCursor(5, 68);
   M5.Lcd.printf("V:%4.2fV I:%4.0fmA  ", v, i);
 
-  // Line 5: Live Motor Command
-  M5.Lcd.setTextSize(3);
+  // Line 5: Live Motor Command (X=Side, Y=Fwd, Z=Yaw)
+  M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(5, 96);
-  M5.Lcd.printf("L:%-4d R:%-4d ", cmd_left, cmd_right);
+  M5.Lcd.printf("X:%-3d Y:%-3d Z:%-3d ", cmd_x, cmd_y, cmd_z);
 }
 
 // =================================================
-// Command parser (supports "motor 100,100", "motor:100,100", "100,100", "motor 100 100")
+// Command parser (supports "drive x,y,z", "motor x,y,z", "x,y,z" or legacy "motor L,R")
 void parseCommand(String cmd) {
   cmd.trim();
   if (cmd.length() == 0) return;
@@ -276,33 +279,59 @@ void parseCommand(String cmd) {
   Serial.println(cmd);
 
   String payload = cmd;
-  if (payload.startsWith("motor")) {
-    payload = payload.substring(5);
+  if (payload.startsWith("drive") || payload.startsWith("motor")) {
+    int sp = payload.indexOf(' ');
+    int col = payload.indexOf(':');
+    int eq = payload.indexOf('=');
+    int startIdx = 5;
+    if (sp >= 0) startIdx = sp + 1;
+    else if (col >= 0) startIdx = col + 1;
+    else if (eq >= 0) startIdx = eq + 1;
+    payload = payload.substring(startIdx);
     payload.trim();
-    if (payload.startsWith(":") || payload.startsWith("=")) {
-      payload = payload.substring(1);
-      payload.trim();
+  }
+
+  payload.replace(' ', ',');
+
+  int firstComma = payload.indexOf(',');
+  if (firstComma < 0) return;
+
+  int secondComma = payload.indexOf(',', firstComma + 1);
+
+  if (secondComma >= 0) {
+    // 3-axis Mecanum: x (sideway), y (forward), z (yaw)
+    int rawX = payload.substring(0, firstComma).toInt();
+    int rawY = payload.substring(firstComma + 1, secondComma).toInt();
+    int rawZ = payload.substring(secondComma + 1).toInt();
+
+    if (abs(rawX) > 100 || abs(rawY) > 100 || abs(rawZ) > 100) {
+      cmd_x = constrain(map(rawX, -255, 255, -100, 100), -100, 100);
+      cmd_y = constrain(map(rawY, -255, 255, -100, 100), -100, 100);
+      cmd_z = constrain(map(rawZ, -255, 255, -100, 100), -100, 100);
+    } else {
+      cmd_x = constrain(rawX, -100, 100);
+      cmd_y = constrain(rawY, -100, 100);
+      cmd_z = constrain(rawZ, -100, 100);
     }
-  }
 
-  int sep = payload.indexOf(',');
-  if (sep < 0) {
-    sep = payload.indexOf(' ');
-  }
-
-  if (sep >= 0) {
-    cmd_left  = constrain(payload.substring(0, sep).toInt(),  -255, 255);
-    cmd_right = constrain(payload.substring(sep + 1).toInt(), -255, 255);
+    Serial.print("[CMD] X="); Serial.print(cmd_x);
+    Serial.print(" Y="); Serial.print(cmd_y);
+    Serial.print(" Z="); Serial.println(cmd_z);
   } else {
-    int val = payload.toInt();
-    cmd_left  = constrain(val, -255, 255);
-    cmd_right = constrain(val, -255, 255);
-  }
+    // 2-axis legacy: left, right
+    int l = payload.substring(0, firstComma).toInt();
+    int r = payload.substring(firstComma + 1).toInt();
+    if (abs(l) > 100 || abs(r) > 100) {
+      l = map(l, -255, 255, -100, 100);
+      r = map(r, -255, 255, -100, 100);
+    }
+    cmd_x = 0;
+    cmd_y = constrain((l + r) / 2, -100, 100);
+    cmd_z = constrain((r - l) / 2, -100, 100);
 
-  Serial.print("[CMD PARSED] L=");
-  Serial.print(cmd_left);
-  Serial.print(" R=");
-  Serial.println(cmd_right);
+    Serial.print("[CMD 2-CH] L="); Serial.print(l);
+    Serial.print(" R="); Serial.println(r);
+  }
 }
 
 // =================================================
@@ -331,40 +360,22 @@ bool checkRoverI2C() {
 }
 
 // =================================================
-// RoverC Motor Control
-// RoverC 4-Wheel Mapping:
-// 0: Front Left,  1: Front Right
-// 2: Rear Right,  3: Rear Left
-void applyMotors(int left_speed, int right_speed) {
-  // Map speed from -255..255 (or -100..100) to RoverC pulse -100..100
-  int l = constrain(left_speed * MOTOR_A_DIR, -255, 255);
-  int r = constrain(right_speed * MOTOR_B_DIR, -255, 255);
+// RoverC Omnidirectional Mecanum Motor Control
+// x: sideway / strafe (-100..100)
+// y: forward / reverse (-100..100)
+// z: yaw / steering   (-100..100)
+void applyMotors(int x, int y, int z) {
+  if (abs(x) < 3) x = 0;
+  if (abs(y) < 3) y = 0;
+  if (abs(z) < 3) z = 0;
 
-  int8_t l_pulse = (int8_t)map(l, -255, 255, -100, 100);
-  int8_t r_pulse = (int8_t)map(r, -255, 255, -100, 100);
-
-  // Deadband
-  if (abs(left_speed) < 5)  l_pulse = 0;
-  if (abs(right_speed) < 5) r_pulse = 0;
-
-  int8_t buf[4];
-  buf[0] = l_pulse; // Front Left
-  buf[1] = r_pulse; // Front Right
-  buf[2] = r_pulse; // Rear Right
-  buf[3] = l_pulse; // Rear Left
-
-  Wire.beginTransmission(0x38);
-  Wire.write(0x00);
-  Wire.write((uint8_t*)buf, 4);
-  Wire.endTransmission();
+  roverc.setSpeed((int8_t)constrain(x, -100, 100),
+                  (int8_t)constrain(y, -100, 100),
+                  (int8_t)constrain(z, -100, 100));
 }
 
 void stop_all() {
-  int8_t buf[4] = {0, 0, 0, 0};
-  Wire.beginTransmission(0x38);
-  Wire.write(0x00);
-  Wire.write((uint8_t*)buf, 4);
-  Wire.endTransmission();
+  roverc.setSpeed(0, 0, 0);
 }
 
 // =================================================
