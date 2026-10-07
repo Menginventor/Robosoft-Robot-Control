@@ -227,7 +227,7 @@ body {
     padding: 5px 0;
     font-size: 14px;
   }
-  .primary-btn, .secondary-btn {
+  .primary-btn, .secondary-btn, .danger-btn {
     padding: 8px;
   }
 }
@@ -267,6 +267,22 @@ body {
   font-size: 14px;
   background: #333;
   color: #eee;
+}
+
+.danger-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  background: #ff4757;
+  color: white;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.danger-btn:active {
+  background: #e84118;
 }
 
 .toggle-row {
@@ -344,6 +360,7 @@ body.is-fullscreen {
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
+    <button class="danger-btn" id="disconnectBtn" style="display: none;">Disconnect BLE</button>
   </div>
 
   <div class="settings-section">
@@ -444,6 +461,7 @@ const cameraBG = document.getElementById("cameraBG");
 const menuBtn = document.getElementById("menuBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const connectBtn = document.getElementById("connectBtn");
+const disconnectBtn = document.getElementById("disconnectBtn");
 const closeSettingsBtn = document.getElementById("closeSettingsBtn");
 const speedSlider = document.getElementById("speedSlider");
 const steeringGainSlider = document.getElementById("steeringGainSlider");
@@ -505,14 +523,16 @@ invertForward.onchange = e => { appSettings.invertForward = e.target.checked; sa
 cameraToggle.onchange = e => toggleCamera(e.target.checked);
 
 /* ================= SETTINGS MODAL ================= */
-menuBtn.onclick = () => {
+function openSettings() {
   overlay.style.display = "block";
   settingsModal.style.display = "block";
-};
-closeSettingsBtn.onclick = overlay.onclick = () => {
+}
+function closeSettings() {
   overlay.style.display = "none";
   settingsModal.style.display = "none";
-};
+}
+menuBtn.onclick = openSettings;
+closeSettingsBtn.onclick = overlay.onclick = closeSettings;
 
 /* ================= CAMERA ================= */
 let cameraStream = null;
@@ -531,14 +551,28 @@ async function toggleCamera(on) {
   }
 }
 
-/* ================= BLE CONNECT ================= */
+/* ================= BLE CONNECT & DISCONNECT ================= */
+function updateBleUi(connected) {
+  if (connected) {
+    statusEl.innerHTML = `Connected <span class="version-badge">v${APP_VERSION}</span>`;
+    statusEl.className = "status-connected";
+    connectBtn.style.display = "none";
+    disconnectBtn.style.display = "block";
+  } else {
+    statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
+    statusEl.className = "status-disconnected";
+    batteryEl.textContent = "V: --.- V | I: ---.- mA";
+    connectBtn.style.display = "block";
+    disconnectBtn.style.display = "none";
+    rxChar = null;
+    txChar = null;
+    isWriting = false;
+  }
+}
+
 function onDisconnected() {
-  statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
-  statusEl.className = "status-disconnected";
-  batteryEl.textContent = "V: --.- V | I: ---.- mA";
-  rxChar = null;
-  txChar = null;
-  isWriting = false;
+  updateBleUi(false);
+  showToast("BLE Disconnected");
 }
 
 connectBtn.onclick = async () => {
@@ -561,11 +595,20 @@ connectBtn.onclick = async () => {
     await txChar.startNotifications();
     txChar.addEventListener("characteristicvaluechanged", onNotify);
 
-    statusEl.innerHTML = `Connected <span class="version-badge">v${APP_VERSION}</span>`;
-    statusEl.className = "status-connected";
+    updateBleUi(true);
+    closeSettings();
+    showToast("Connected to ANT-BOT");
   } catch (e) {
-    onDisconnected();
+    updateBleUi(false);
     console.error(e);
+  }
+};
+
+disconnectBtn.onclick = () => {
+  if (device && device.gatt && device.gatt.connected) {
+    device.gatt.disconnect();
+  } else {
+    onDisconnected();
   }
 };
 
