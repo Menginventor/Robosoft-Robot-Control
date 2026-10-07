@@ -36,6 +36,7 @@ Access the live web controller here:
 - **RX UUID (Write)**: `12345678-1234-1234-1234-1234567890ac`
 - **TX UUID (Notify)**: `12345678-1234-1234-1234-1234567890ad`
 - 📖 **Full Protocol Specification**: See [BLE_PROTOCOL.md](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/BLE_PROTOCOL.md) for command framing, packet rates, Mecanum kinematics mapping, and Python/JS client examples.
+- 📱 **Mobile Touchscreen UX Architecture**: See [MOBILE_UX.md](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/MOBILE_UX.md) for touchscreen gesture isolation, drag-only slider controls, landscape viewport optimizations, and state persistence.
 
 ---
 
