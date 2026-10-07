@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#111111">
-<title>ANT-BOT Control v1.0.2</title>
+<title>ANT-BOT Control v1.0.3</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
 <style>
@@ -98,12 +98,58 @@ body {
 #menuBtn { left: 12px; }
 #fullscreenBtn { right: 12px; }
 
+#statusRow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 #status {
   font-size: 14px;
   font-weight: 600;
+  transition: opacity 0.15s ease;
 }
-.status-connected { color: #4cff88; }
-.status-disconnected { color: #ff5c5c; }
+.status-connected {
+  color: #4cff88;
+  cursor: default;
+}
+.status-disconnected {
+  color: #ff5c5c;
+  cursor: pointer;
+}
+.status-disconnected:active {
+  opacity: 0.75;
+}
+
+.quick-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #2f80ff;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(47, 128, 255, 0.35);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.quick-connect-btn:active {
+  background: #1a6be0;
+  transform: scale(0.93);
+}
+
+.quick-connect-btn svg {
+  display: block;
+}
 
 #battery {
   margin-top: 6px;
@@ -420,7 +466,7 @@ body.is-fullscreen {
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.2</span></div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.3</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -485,7 +531,15 @@ body.is-fullscreen {
       <line x1="3" y1="21" x2="10" y2="14"></line>
     </svg>
   </button>
-  <div id="status" class="status-disconnected">Disconnected <span class="version-badge">v1.0.2</span></div>
+  <div id="statusRow">
+    <div id="status" class="status-disconnected" title="Click to Connect">Not connect <span class="version-badge">v1.0.3</span></div>
+    <button id="quickConnectBtn" class="quick-connect-btn" title="Connect to BLE">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
+      </svg>
+      <span>Connect</span>
+    </button>
+  </div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
 
@@ -504,7 +558,7 @@ body.is-fullscreen {
 
 <script>
 /* ================= VERSION & CACHE MANAGEMENT ================= */
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.3";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -526,6 +580,7 @@ let rxBuffer = "";
 const overlay = document.getElementById("overlay");
 const settingsModal = document.getElementById("settingsModal");
 const statusEl = document.getElementById("status");
+const quickConnectBtn = document.getElementById("quickConnectBtn");
 const batteryEl = document.getElementById("battery");
 const cameraBG = document.getElementById("cameraBG");
 const menuBtn = document.getElementById("menuBtn");
@@ -703,12 +758,14 @@ function updateBleUi(connected) {
     statusEl.className = "status-connected";
     connectBtn.style.display = "none";
     disconnectBtn.style.display = "block";
+    quickConnectBtn.style.display = "none";
   } else {
-    statusEl.innerHTML = `Disconnected <span class="version-badge">v${APP_VERSION}</span>`;
+    statusEl.innerHTML = `Not connect <span class="version-badge">v${APP_VERSION}</span>`;
     statusEl.className = "status-disconnected";
     batteryEl.textContent = "V: --.- V | I: ---.- mA";
     connectBtn.style.display = "block";
     disconnectBtn.style.display = "none";
+    quickConnectBtn.style.display = "inline-flex";
     rxChar = null;
     txChar = null;
     isWriting = false;
@@ -720,7 +777,7 @@ function onDisconnected() {
   showToast("BLE Disconnected");
 }
 
-connectBtn.onclick = async () => {
+async function startBleConnection() {
   try {
     device = await navigator.bluetooth.requestDevice({
       filters: [
@@ -747,6 +804,12 @@ connectBtn.onclick = async () => {
     updateBleUi(false);
     console.error(e);
   }
+}
+
+connectBtn.onclick = startBleConnection;
+quickConnectBtn.onclick = startBleConnection;
+statusEl.onclick = () => {
+  if (!rxChar) startBleConnection();
 };
 
 disconnectBtn.onclick = () => {
