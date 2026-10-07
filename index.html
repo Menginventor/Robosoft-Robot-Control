@@ -236,7 +236,7 @@ input[type="range"] { width: 100%; }
 
 <!-- ===== JOYSTICKS ===== -->
 <div class="joy joy-left" id="joyYaw">
-  <div class="joy-label">STEER (YAW)</div>
+  <div class="joy-label">STEER / DRIVE</div>
   <div class="knob"></div>
 </div>
 
@@ -261,9 +261,11 @@ const statusEl = document.getElementById("status");
 const cameraBG = document.getElementById("cameraBG");
 
 /* ================= CONTROL STATE ================= */
-let forward = 0;   // forward/reverse (-1 to 1) from Right Joystick
-let sideway = 0;   // strafe left/right (-1 to 1) from Right Joystick
-let yaw = 0;       // steering / rotation (-1 to 1) from Left Joystick
+let forward = 0;       // forward/reverse (-1 to 1) from Right Joystick
+let sideway = 0;       // strafe left/right (-1 to 1) from Right Joystick
+let yaw = 0;           // steering / rotation (-1 to 1) from Left Joystick
+let leftForward = 0;   // forward/reverse from Left Joystick when Right Joy is idle
+let rightJoyActive = false;
 
 /* ================= SETTINGS ================= */
 let appSettings = Object.assign({
@@ -362,8 +364,9 @@ function onNotify(e) {
 setInterval(() => {
   if (!rxChar) return;
 
+  const activeFwd = rightJoyActive ? forward : leftForward;
   const x = Math.round(Math.min(100, Math.max(-100, sideway * appSettings.maxSpeed * 100)));
-  const y = Math.round(Math.min(100, Math.max(-100, forward * appSettings.maxSpeed * 100)));
+  const y = Math.round(Math.min(100, Math.max(-100, activeFwd * appSettings.maxSpeed * 100)));
   const z = Math.round(Math.min(100, Math.max(-100, yaw * appSettings.maxSpeed * 100)));
 
   rxChar.writeValue(
@@ -382,7 +385,7 @@ function handleStatus(msg) {
 }
 
 /* ================= RELATIVE JOYSTICK ================= */
-function setupJoystick(el, onMove, onRelease) {
+function setupJoystick(el, onMove, onRelease, onStart) {
   const knob = el.querySelector(".knob");
   const r = el.clientWidth / 2;
   const kr = knob.clientWidth / 2;
@@ -403,6 +406,7 @@ function setupJoystick(el, onMove, onRelease) {
     el.setPointerCapture(e.pointerId);
     active = true;
     sx = e.clientX; sy = e.clientY;
+    if (onStart) onStart();
     update(0, 0);
   });
   el.addEventListener("pointermove", e => { if (active) update(e.clientX - sx, e.clientY - sy); });
@@ -425,23 +429,34 @@ fullscreenBtn.onclick = () => {
 };
 
 /* ================= INIT ================= */
-// Left Joystick: Only controls steering (Yaw)
+// Left Joystick: Controls steering (Yaw) + Forward (when Right Joy is not touched)
 setupJoystick(
   document.getElementById("joyYaw"),
   (nx, ny) => {
     yaw = appSettings.invertYaw ? -nx : nx;
+    leftForward = appSettings.invertForward ? ny : -ny;
   },
-  () => { yaw = 0; }
+  () => {
+    yaw = 0;
+    leftForward = 0;
+  }
 );
 
-// Right Joystick: Go forward and go sideway (Forward & Strafe)
+// Right Joystick: Controls Forward and Sideway (takes precedence when touched)
 setupJoystick(
   document.getElementById("joyDrive"),
   (nx, ny) => {
     sideway = appSettings.invertSideway ? -nx : nx;
     forward = appSettings.invertForward ? ny : -ny;
   },
-  () => { forward = 0; sideway = 0; }
+  () => {
+    rightJoyActive = false;
+    forward = 0;
+    sideway = 0;
+  },
+  () => {
+    rightJoyActive = true;
+  }
 );
 
 if (appSettings.cameraBG) toggleCamera(true);

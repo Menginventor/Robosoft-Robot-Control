@@ -376,15 +376,14 @@ void applyMotors(int x, int y, int z) {
   if (abs(y) < 3) y = 0;
   if (abs(z) < 3) z = 0;
 
-  // RoverC Physical Motor Mapping:
-  // Right-side motors (FR, RR) are mirrored physically relative to left-side (FL, RL):
-  // - Forward (y): Left +, Right -
-  // - Yaw (z):     Left +, Right +
-  // - Strafe (x):  FL +, FR -, RR +, RL -
-  int fl =  y + x + z;
-  int fr = -y - x + z;
-  int rr = -y + x + z;
-  int rl =  y - x + z;
+  // Physical calibration for this RoverC hardware:
+  // - Forward / Backward (y): fl +, fr +, rr +, rl +
+  // - Sideway / Strafe   (x): fl -, fr +, rr +, rl - (inverted)
+  // - Yaw / Steering     (z): fl +, fr -, rr +, rl -
+  int fl = y - x + z;
+  int fr = y + x - z;
+  int rr = y + x + z;
+  int rl = y - x - z;
 
   int8_t buf[4];
   buf[0] = (int8_t)constrain(fl, -100, 100); // Front Left
