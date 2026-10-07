@@ -59,6 +59,6 @@ All firmware source code and configurations are organized in the [`firmware/`](f
    ```bash
    npx serve .
    ```
-2. Click the **Not connect** Bluetooth pill in the top bar (or open Settings ☰ > **Connect to BLE**).
+2. Click the **Not connect** Bluetooth pill in the top bar (or open Settings ⚙ > **Connect to BLE**).
 3. Select your device (**`ANT-BOT_<XXXX>`**, e.g. `ANT-BOT_09EA`) from the browser popup (the exact 4-character ID is shown on the top line of the M5StickC display).
 4. Drive with the on-screen joystick!
