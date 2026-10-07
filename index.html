@@ -287,6 +287,15 @@ const settingsModal = document.getElementById("settingsModal");
 const statusEl = document.getElementById("status");
 const batteryEl = document.getElementById("battery");
 const cameraBG = document.getElementById("cameraBG");
+const menuBtn = document.getElementById("menuBtn");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+const connectBtn = document.getElementById("connectBtn");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const speedSlider = document.getElementById("speedSlider");
+const invertSideway = document.getElementById("invertSideway");
+const invertYaw = document.getElementById("invertYaw");
+const invertForward = document.getElementById("invertForward");
+const cameraToggle = document.getElementById("cameraToggle");
 
 /* ================= CONTROL STATE ================= */
 let forward = 0;       // forward/reverse (-1 to 1) from Right Joystick
@@ -471,14 +480,52 @@ function setupJoystick(el, onMove, onRelease, onStart) {
   el.addEventListener("pointercancel", end);
 }
 
-/* ================= FULLSCREEN (FIXED) ================= */
-fullscreenBtn.onclick = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
+/* ================= FULLSCREEN ================= */
+function isFullscreen() {
+  return !!(
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
+}
+
+async function toggleFullscreen() {
+  try {
+    const doc = document.documentElement;
+    if (!isFullscreen()) {
+      if (doc.requestFullscreen) {
+        await doc.requestFullscreen();
+      } else if (doc.webkitRequestFullscreen) {
+        await doc.webkitRequestFullscreen();
+      } else if (doc.mozRequestFullScreen) {
+        await doc.mozRequestFullScreen();
+      } else if (doc.msRequestFullscreen) {
+        await doc.msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        await document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
+    }
+  } catch (err) {
+    console.warn("Fullscreen toggle warning:", err);
   }
-};
+}
+
+fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+function updateFsIcon() {
+  fullscreenBtn.textContent = isFullscreen() ? "🗗" : "⛶";
+}
+document.addEventListener("fullscreenchange", updateFsIcon);
+document.addEventListener("webkitfullscreenchange", updateFsIcon);
 
 /* ================= INIT ================= */
 // Left Joystick: Controls steering (Yaw) + Forward (when Right Joy is not touched)
