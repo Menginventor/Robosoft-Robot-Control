@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#111111">
-<title>ANT-BOT Control v1.0.3</title>
+<title>ANT-BOT Control v1.0.4</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
 <style>
@@ -98,57 +98,166 @@ body {
 #menuBtn { left: 12px; }
 #fullscreenBtn { right: 12px; }
 
-#statusRow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+#statusContainer {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
 }
 
-#status {
-  font-size: 14px;
-  font-weight: 600;
-  transition: opacity 0.15s ease;
-}
-.status-connected {
-  color: #4cff88;
-  cursor: default;
-}
-.status-disconnected {
-  color: #ff5c5c;
-  cursor: pointer;
-}
-.status-disconnected:active {
-  opacity: 0.75;
-}
-
-.quick-connect-btn {
+.ble-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: #2f80ff;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 12px;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  padding: 5px 12px 5px 10px;
+  color: #eee;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 2px 8px rgba(47, 128, 255, 0.35);
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.quick-connect-btn:active {
-  background: #1a6be0;
-  transform: scale(0.93);
+.ble-pill:active {
+  transform: scale(0.96);
 }
 
-.quick-connect-btn svg {
+.ble-pill .pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ble-pill .pill-icon {
   display: block;
+  flex-shrink: 0;
+}
+
+/* Disconnected State */
+.ble-pill.disconnected {
+  border-color: rgba(255, 92, 92, 0.35);
+  background: rgba(255, 92, 92, 0.1);
+}
+.ble-pill.disconnected .pill-dot {
+  background: #ff5c5c;
+  box-shadow: 0 0 6px rgba(255, 92, 92, 0.7);
+}
+.ble-pill.disconnected .pill-icon {
+  stroke: #ff5c5c;
+}
+.ble-pill.disconnected #blePillText {
+  color: #ff8585;
+}
+.ble-pill.disconnected:hover {
+  background: rgba(255, 92, 92, 0.18);
+  border-color: rgba(255, 92, 92, 0.55);
+}
+
+/* Connected State */
+.ble-pill.connected {
+  border-color: rgba(76, 255, 136, 0.4);
+  background: rgba(76, 255, 136, 0.1);
+}
+.ble-pill.connected .pill-dot {
+  background: #4cff88;
+  box-shadow: 0 0 8px rgba(76, 255, 136, 0.85);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+.ble-pill.connected .pill-icon {
+  stroke: #4cff88;
+}
+.ble-pill.connected #blePillText {
+  color: #79ffa8;
+}
+.ble-pill.connected:hover {
+  background: rgba(76, 255, 136, 0.18);
+  border-color: rgba(76, 255, 136, 0.6);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Connection Popover */
+.ble-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: rgba(26, 26, 30, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
+  z-index: 100;
+  text-align: left;
+}
+
+.ble-popover .popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.ble-popover .popover-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.ble-popover .popover-status {
+  font-size: 11px;
+  color: #4cff88;
+  font-weight: 600;
+}
+.ble-popover .popover-info {
+  font-size: 12px;
+  color: #bbb;
+  margin-bottom: 10px;
+}
+.ble-popover .popover-actions {
+  display: flex;
+  gap: 6px;
+}
+.popover-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.popover-btn.danger {
+  background: rgba(255, 71, 87, 0.2);
+  color: #ff6b81;
+  border: 1px solid rgba(255, 71, 87, 0.35);
+}
+.popover-btn.danger:active {
+  background: #ff4757;
+  color: #fff;
+}
+.popover-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.popover-btn.secondary:active {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 #battery {
@@ -466,7 +575,7 @@ body.is-fullscreen {
 
 <!-- ===== SETTINGS ===== -->
 <div id="settingsModal">
-  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.3</span></div>
+  <div class="settings-header">⚙ Settings <span class="version-badge">v1.0.4</span></div>
 
   <div class="settings-section">
     <button class="primary-btn" id="connectBtn">Connect to BLE</button>
@@ -531,14 +640,28 @@ body.is-fullscreen {
       <line x1="3" y1="21" x2="10" y2="14"></line>
     </svg>
   </button>
-  <div id="statusRow">
-    <div id="status" class="status-disconnected" title="Click to Connect">Not connect <span class="version-badge">v1.0.3</span></div>
-    <button id="quickConnectBtn" class="quick-connect-btn" title="Connect to BLE">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+  <div id="statusContainer">
+    <button id="blePill" class="ble-pill disconnected" title="Bluetooth Status - Click for options">
+      <span class="pill-dot"></span>
+      <svg class="pill-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
         <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
       </svg>
-      <span>Connect</span>
+      <span id="blePillText">Not connect</span>
+      <span class="version-badge">v1.0.4</span>
     </button>
+
+    <!-- Quick Connection Popover -->
+    <div id="blePopover" class="ble-popover" style="display: none;">
+      <div class="popover-header">
+        <span class="popover-title" id="popoverDeviceName">ANT-BOT</span>
+        <span class="popover-status">Connected</span>
+      </div>
+      <div class="popover-info" id="popoverBattery">V: --.- V | I: ---.- mA</div>
+      <div class="popover-actions">
+        <button id="popoverDisconnectBtn" class="popover-btn danger">Disconnect</button>
+        <button id="popoverSettingsBtn" class="popover-btn secondary">Settings ⚙</button>
+      </div>
+    </div>
   </div>
   <div id="battery">V: --.- V | I: ---.- mA</div>
 </div>
@@ -558,7 +681,7 @@ body.is-fullscreen {
 
 <script>
 /* ================= VERSION & CACHE MANAGEMENT ================= */
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -579,8 +702,13 @@ let rxBuffer = "";
 /* ================= DOM ================= */
 const overlay = document.getElementById("overlay");
 const settingsModal = document.getElementById("settingsModal");
-const statusEl = document.getElementById("status");
-const quickConnectBtn = document.getElementById("quickConnectBtn");
+const blePill = document.getElementById("blePill");
+const blePillText = document.getElementById("blePillText");
+const blePopover = document.getElementById("blePopover");
+const popoverDeviceName = document.getElementById("popoverDeviceName");
+const popoverBattery = document.getElementById("popoverBattery");
+const popoverDisconnectBtn = document.getElementById("popoverDisconnectBtn");
+const popoverSettingsBtn = document.getElementById("popoverSettingsBtn");
 const batteryEl = document.getElementById("battery");
 const cameraBG = document.getElementById("cameraBG");
 const menuBtn = document.getElementById("menuBtn");
@@ -754,18 +882,21 @@ async function toggleCamera(on) {
 /* ================= BLE CONNECT & DISCONNECT ================= */
 function updateBleUi(connected) {
   if (connected) {
-    statusEl.innerHTML = `Connected <span class="version-badge">v${APP_VERSION}</span>`;
-    statusEl.className = "status-connected";
+    blePill.className = "ble-pill connected";
+    const devName = (device && device.name) ? device.name : "Connected";
+    blePillText.textContent = devName;
+    popoverDeviceName.textContent = devName;
+    popoverBattery.textContent = batteryEl.textContent;
     connectBtn.style.display = "none";
     disconnectBtn.style.display = "block";
-    quickConnectBtn.style.display = "none";
   } else {
-    statusEl.innerHTML = `Not connect <span class="version-badge">v${APP_VERSION}</span>`;
-    statusEl.className = "status-disconnected";
+    blePill.className = "ble-pill disconnected";
+    blePillText.textContent = "Not connect";
     batteryEl.textContent = "V: --.- V | I: ---.- mA";
+    popoverBattery.textContent = "V: --.- V | I: ---.- mA";
+    blePopover.style.display = "none";
     connectBtn.style.display = "block";
     disconnectBtn.style.display = "none";
-    quickConnectBtn.style.display = "inline-flex";
     rxChar = null;
     txChar = null;
     isWriting = false;
@@ -806,11 +937,43 @@ async function startBleConnection() {
   }
 }
 
-connectBtn.onclick = startBleConnection;
-quickConnectBtn.onclick = startBleConnection;
-statusEl.onclick = () => {
-  if (!rxChar) startBleConnection();
+// Click on pill: if not connected, connect; if connected, show options popover
+blePill.onclick = (e) => {
+  e.stopPropagation();
+  if (!rxChar) {
+    startBleConnection();
+  } else {
+    const isShowing = blePopover.style.display === "block";
+    blePopover.style.display = isShowing ? "none" : "block";
+    if (!isShowing) {
+      popoverBattery.textContent = batteryEl.textContent;
+    }
+  }
 };
+
+popoverDisconnectBtn.onclick = (e) => {
+  e.stopPropagation();
+  blePopover.style.display = "none";
+  if (device && device.gatt && device.gatt.connected) {
+    device.gatt.disconnect();
+  } else {
+    onDisconnected();
+  }
+};
+
+popoverSettingsBtn.onclick = (e) => {
+  e.stopPropagation();
+  blePopover.style.display = "none";
+  openSettings();
+};
+
+document.addEventListener("click", (e) => {
+  if (blePopover.style.display === "block" && !blePopover.contains(e.target) && e.target !== blePill) {
+    blePopover.style.display = "none";
+  }
+});
+
+connectBtn.onclick = startBleConnection;
 
 disconnectBtn.onclick = () => {
   if (device && device.gatt && device.gatt.connected) {
@@ -866,8 +1029,9 @@ function handleStatus(msg) {
   const v = msg.match(/V=([-\d.]+)/);
   const i = msg.match(/I=([-\d.]+)/);
   if (v && i) {
-    batteryEl.textContent =
-      `V: ${(+v[1]).toFixed(2)} V | I: ${(+i[1]).toFixed(1)} mA`;
+    const text = `V: ${(+v[1]).toFixed(2)} V | I: ${(+i[1]).toFixed(1)} mA`;
+    batteryEl.textContent = text;
+    if (popoverBattery) popoverBattery.textContent = text;
   }
 }
 
