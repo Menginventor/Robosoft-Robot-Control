@@ -220,7 +220,9 @@ Robot preferences are stored in the browser's `localStorage` to ensure instant c
   "invertSideway": false,
   "invertYaw": false,
   "invertForward": false,
-  "cameraBG": false
+  "cameraBG": false,
+  "tone": "dark",
+  "theme": "blue"
 }
 ```
 
@@ -232,14 +234,16 @@ let appSettings = Object.assign({
   invertSideway: false,
   invertYaw: false,
   invertForward: false,
-  cameraBG: false
+  cameraBG: false,
+  tone: "dark",
+  theme: "blue"
 }, JSON.parse(localStorage.getItem("settings") || "{}"));
 ```
 
 ### 7.3 Cache & PWA Invalidation
 To prevent mobile devices from holding onto stale cached scripts when new versions are released, `APP_VERSION` is validated on boot:
 ```javascript
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -249,6 +253,11 @@ if (localStorage.getItem("app_version") !== APP_VERSION) {
   }
 }
 ```
+
+### 7.4 Personalization & Theme Architecture
+- **Tone Control**: Managed via `<html data-tone="dark|light">`. Dark tone preserves cockpit night vision; light tone adapts for high ambient daylight use.
+- **Accent Themes**: Managed via `<html data-theme="blue|green|purple|amber|crimson|cyan">`. Dynamic CSS variables (`--accent`, `--accent-hover`, `--accent-glow`, `--accent-badge-bg`, `--accent-badge-text`) recalculate across buttons, sliders, badges, and indicators.
+- **Status Bar Integration**: Dynamically mirrors `data-tone` into `<meta name="theme-color">` to harmonize with mobile system browser bars.
 
 ---
 

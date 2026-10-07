@@ -1,4 +1,4 @@
-# Robosoft-Robot-Control `v1.0.4`
+# Robosoft-Robot-Control `v1.0.5`
 
 Web Bluetooth (BLE) robot controller for **M5StickC / M5StickC Plus** mounted on the **M5Stack RoverC** base.
 
@@ -12,6 +12,10 @@ Access the live web controller here:
 
 ## 🚀 Features
 - **Web Bluetooth (BLE) Control**: Connect directly from your browser with no native app installation needed.
+- **Personalization Options**:
+  - **Tone Selector**: Dark tone (tactical cockpit default) or Light tone.
+  - **Accent Themes**: Cyber Blue, Emerald Green, Neon Purple, Amber Gold, Crimson Red, and Electric Cyan.
+  - **Local Persistence**: Preferences are saved locally in the browser across sessions.
 - **Dual Virtual Joysticks (Mecanum Kinematics)**:
   - **Left Joystick (`STEER`)**: Controls yaw rotation in place (turning left/right).
   - **Right Joystick (`MOVE`)**: Controls 2D planar motion — forward/backward and sideway (strafe left/right).
