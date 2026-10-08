@@ -243,7 +243,7 @@ let appSettings = Object.assign({
 ### 7.3 Cache & PWA Invalidation
 To prevent mobile devices from holding onto stale cached scripts when new versions are released, `APP_VERSION` is validated on boot:
 ```javascript
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.7";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
@@ -254,16 +254,26 @@ if (localStorage.getItem("app_version") !== APP_VERSION) {
 }
 ```
 
-### 7.4 Personalization & Theme Architecture
-- **Tone Control**: Managed via `<html data-tone="dark|light">`. Dark tone preserves cockpit night vision; light tone adapts for high ambient daylight use.
-- **Accent Themes**: Managed via `<html data-theme="blue|green|purple|amber|crimson|cyan">`. Dynamic CSS variables (`--accent`, `--accent-hover`, `--accent-glow`, `--accent-badge-bg`, `--accent-badge-text`) recalculate across buttons, sliders, badges, and indicators.
-- **Status Bar Integration**: Dynamically mirrors `data-tone` into `<meta name="theme-color">` to harmonize with mobile system browser bars.
+### 7.4 Separated Control & Personalization Architecture
+To maintain a focused cockpit experience on mobile screens, settings are segregated into two distinct domains:
+- **Controls Domain (`#panelControls`)**: Driving kinematics parameters (Max Speed default 100%, Steering Gain default 1.00x, inversions, reset defaults), BLE connection actions, and camera feed toggle.
+- **Personalization Domain (`#panelPersonalize`)**:
+  - **Tone Control**: Managed via `<html data-tone="dark|light">`. Dark tone preserves cockpit night vision; light tone adapts for high ambient daylight use.
+  - **Accent Themes**: Managed via `<html data-theme="blue|green|purple|amber|crimson|cyan">`. Dynamic CSS variables (`--accent`, `--accent-hover`, `--accent-glow`, `--accent-badge-bg`, `--accent-badge-text`) recalculate across buttons, sliders, badges, and indicators.
+  - **Top Bar Direct Access**: A dedicated Palette button allows one-tap personalization without traversing control menus.
 
 ---
 
-## 8. Dual Virtual Joystick Kinematics
+## 8. Dual Virtual Joystick Kinematics & Safety Lockout
 
-### 8.1 Relative Joystick Touch Handling
+### 8.1 BLE Connection Safety Lockout
+- When Bluetooth is disconnected, joysticks are automatically given the `.disabled` class:
+  - Visual opacity drops to 32% with grayscale filtering.
+  - Pointer interaction is locked via `pointer-events: none` and JavaScript guards.
+  - All kinematics registers (`forward`, `sideway`, `yaw`, `leftForward`, `rightJoyActive`) are immediately zeroed and knobs are re-centered to `(0, 0)` (`translate(-50%, -50%)`).
+- Upon successful BLE GATT handshake, joysticks smoothly transition into active, touch-responsive mode.
+
+### 8.2 Relative Joystick Touch Handling
 - Left Joystick: Steers yaw (rotation around center) + forward/reverse backup.
 - Right Joystick: 2D planar motion (sideway strafe + forward/reverse). Takes active drive precedence when touched.
 - Uses `pointerdown`, `pointermove`, and `pointerup` with `setPointerCapture` to prevent touch dropouts when thumb crosses outside the circular joystick boundary.

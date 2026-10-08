@@ -84,35 +84,39 @@ Firmware converts differential left/right inputs into forward (`y = (l + r)/2`) 
 
 ## 4. Robot to Controller (TX - Telemetry Protocol)
 
-The robot streams telemetry notifications from the **TX Characteristic** (`...90ad`) at **2 Hz** (every 500 ms) as long as BLE is connected.
+The robot streams telemetry notifications from the **TX Characteristic** (`...90ad`) at **2 Hz** (every 500 ms) as long as BLE is connected. The client (`v1.0.6`) features a universal parser supporting standard power readings, arbitrary sensor metrics, key-value pairs, JSON objects, and raw text strings.
 
-### 4.1 Telemetry Packet Format
+### 4.1 Telemetry Packet Formats
 
-```text
-status V=<voltage> I=<current>\n
-```
+1. **Standard Power Format**:
+   ```text
+   status V=<voltage> I=<current>\n
+   ```
+2. **Arbitrary Key-Value Pairs** (space or comma-delimited):
+   ```text
+   telemetry temp=28.5 hum=60 bat=92% dist=14.2cm rpm=1200\n
+   ```
+3. **JSON Object Payload**:
+   ```json
+   {"v": 4.12, "temp": 28.5, "rpm": 1200}
+   ```
 
-### 4.2 Fields
-| Field | Format | Unit | Description |
-| :--- | :--- | :---: | :--- |
-| **`V`** | Decimal float (e.g., `4.12`) | Volts ($V$) | Current battery/bus supply voltage measured by AXP192 |
-| **`I`** | Decimal float (e.g., `125.4`) | Milliamps ($mA$) | Battery discharge or charge current |
+### 4.2 Standard Fields & Formatting
+| Field | Common Units | Client Auto-Formatting | Description |
+| :--- | :---: | :--- | :--- |
+| **`V` / `VOLT`** | $V$ | `V: X.XX V` | Battery/bus supply voltage |
+| **`I` / `CUR`** | $mA$ | `I: XXX.X mA` | Battery charge or discharge current |
+| **`BAT` / `SOC`** | $\%$ | `BAT: XX%` | Battery state-of-charge percentage |
+| **`TEMP`** | $^\circ\text{C}$ | `TEMP: XX.X°C` | Core or ambient temperature |
+| **`RPM`** | $\text{RPM}$ | `RPM: XXXX RPM` | Motor rotational velocity |
+| **`DIST`** | $\text{cm}$ | `DIST: XX.X cm` | Ultrasonic / ToF range sensor reading |
+| **Other / Custom** | Custom | `key: val` | Displayed directly with automatic pair joining (` \| `) |
 
-#### Example:
-```text
-status V=4.08 I=132.5\n
-```
-
-### 4.3 Parsing in Client (JavaScript Regex)
+### 4.3 Parsing in Client (v1.0.6 Universal Parser)
 ```javascript
 function handleStatus(msg) {
-  const v = msg.match(/V=([-\d.]+)/);
-  const i = msg.match(/I=([-\d.]+)/);
-  if (v && i) {
-    const voltage = parseFloat(v[1]);
-    const current = parseFloat(i[1]);
-    console.log(`Battery: ${voltage} V, Current: ${current} mA`);
-  }
+  // Automatically decodes JSON, key-value pairs, or raw status text
+  // and formats with appropriate engineering units.
 }
 ```
 

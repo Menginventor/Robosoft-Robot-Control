@@ -1,4 +1,4 @@
-# Robosoft-Robot-Control `v1.0.5`
+# Robosoft-Robot-Control `v1.0.7`
 
 Web Bluetooth (BLE) robot controller for **M5StickC / M5StickC Plus** mounted on the **M5Stack RoverC** base.
 
@@ -12,17 +12,17 @@ Access the live web controller here:
 
 ## 🚀 Features
 - **Web Bluetooth (BLE) Control**: Connect directly from your browser with no native app installation needed.
-- **Personalization Options**:
-  - **Tone Selector**: Dark tone (tactical cockpit default) or Light tone.
-  - **Accent Themes**: Cyber Blue, Emerald Green, Neon Purple, Amber Gold, Crimson Red, and Electric Cyan.
-  - **Local Persistence**: Preferences are saved locally in the browser across sessions.
+- **Separated Control & Personalization Settings**:
+  - **Controls Tab**: Driving parameters (Max Speed default 100%, Steering Gain default 1.00x, inversions, reset defaults), BLE connection actions, and camera feed toggle.
+  - **Personalization Tab**: Accessible from settings modal or direct top-bar Palette button (Dark/Light tone and 6 accent themes).
 - **Dual Virtual Joysticks (Mecanum Kinematics)**:
+  - **Dynamic Theme Personalization**: Joysticks and knobs dynamically adopt chosen Accent Themes (Cyber Blue, Emerald Green, Neon Purple, Amber Gold, Crimson, Electric Cyan) with glowing halos, tinted borders, and center pips.
   - **Left Joystick (`STEER`)**: Controls yaw rotation in place (turning left/right).
   - **Right Joystick (`MOVE`)**: Controls 2D planar motion — forward/backward and sideway (strafe left/right).
-- **Telemetry Display**: Live battery voltage ($V$) and current ($mA$) readings streamed over BLE notifications.
+  - **BLE Connection Safety Lockout**: Joysticks are visually dimmed, locked, and centered when Bluetooth is disconnected to prevent accidental input.
+- **Universal Telemetry Display**: Real-time telemetry streaming over BLE notifications supporting any arbitrary sensor values (voltage, current, battery level, temperature, RPM, distance, custom key-value pairs, JSON, or raw text) dynamically formatted in the UI.
 - **Safety Auto-Stop**: Watchdog timer stops the motors automatically if BLE connection or commands drop.
 - **Camera Background View**: Optional FPV-style camera feed backdrop while driving.
-- **Configurable Controls**: Adjustable max speed limits, invert sideway, invert yaw, and invert forward.
 - **Onboard Screen Status**: Displays live connection status, RoverC base detection, battery readings, and live 3-axis command values ($X, Y, Z$) on the M5StickC Plus LCD.
 
 ---
