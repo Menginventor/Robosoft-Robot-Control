@@ -1,4 +1,4 @@
-# Robosoft-Robot-Control `v1.0.7`
+# Robosoft-Robot-Control `v1.0.8`
 
 Web Bluetooth (BLE) robot controller for **M5StickC / M5StickC Plus** mounted on the **M5Stack RoverC** base.
 
@@ -39,15 +39,15 @@ Access the live web controller here:
 - **Service UUID**: `12345678-1234-1234-1234-1234567890ab`
 - **RX UUID (Write)**: `12345678-1234-1234-1234-1234567890ac`
 - **TX UUID (Notify)**: `12345678-1234-1234-1234-1234567890ad`
-- 📖 **Full Protocol Specification**: See [BLE_PROTOCOL.md](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/BLE_PROTOCOL.md) for command framing, packet rates, Mecanum kinematics mapping, and Python/JS client examples.
-- 📱 **Mobile Touchscreen UX Architecture**: See [MOBILE_UX.md](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/MOBILE_UX.md) for touchscreen gesture isolation, drag-only slider controls, landscape viewport optimizations, and state persistence.
+- 📖 **Full Protocol Specification**: See [BLE_PROTOCOL.md](BLE_PROTOCOL.md) for command framing, packet rates, Mecanum kinematics mapping, and Python/JS client examples.
+- 📱 **Mobile Touchscreen UX Architecture**: See [MOBILE_UX.md](MOBILE_UX.md) for touchscreen gesture isolation, drag-only slider controls, landscape viewport optimizations, and state persistence.
 
 ---
 
 ## 💻 Getting Started
 
 ### 1. Firmware (PlatformIO)
-All firmware source code and configurations are organized in the [`firmware/`](file:///c:/Users/admin/Documents/PlatformIO/Projects/Robosoft-Robot-Control/firmware) directory.
+All firmware source code and configurations are organized in the [`firmware/`](firmware) directory.
 
 1. Open this repository in VS Code with the PlatformIO extension installed (or `cd firmware`).
 2. Connect your M5StickC via USB-C.

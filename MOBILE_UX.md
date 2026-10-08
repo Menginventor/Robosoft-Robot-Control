@@ -243,7 +243,7 @@ let appSettings = Object.assign({
 ### 7.3 Cache & PWA Invalidation
 To prevent mobile devices from holding onto stale cached scripts when new versions are released, `APP_VERSION` is validated on boot:
 ```javascript
-const APP_VERSION = "1.0.7";
+const APP_VERSION = "1.0.8";
 if (localStorage.getItem("app_version") !== APP_VERSION) {
   localStorage.setItem("app_version", APP_VERSION);
   if ("serviceWorker" in navigator) {
