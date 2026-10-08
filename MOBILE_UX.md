@@ -260,7 +260,7 @@ To maintain a focused cockpit experience on mobile screens, settings are segrega
 - **Personalization Domain (`#panelPersonalize`)**:
   - **Tone Control**: Managed via `<html data-tone="dark|light">`. Dark tone preserves cockpit night vision; light tone adapts for high ambient daylight use.
   - **Accent Themes**: Managed via `<html data-theme="blue|green|purple|amber|crimson|cyan">`. Dynamic CSS variables (`--accent`, `--accent-hover`, `--accent-glow`, `--accent-badge-bg`, `--accent-badge-text`) recalculate across buttons, sliders, badges, and indicators.
-  - **Top Bar Direct Access**: A dedicated Palette button allows one-tap personalization without traversing control menus.
+  - **Seamless Modal Navigation**: Switch instantaneously between Controls and Personalize tabs in the settings panel with zero screen clutter.
 
 ---
 

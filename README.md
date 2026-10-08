@@ -14,7 +14,7 @@ Access the live web controller here:
 - **Web Bluetooth (BLE) Control**: Connect directly from your browser with no native app installation needed.
 - **Separated Control & Personalization Settings**:
   - **Controls Tab**: Driving parameters (Max Speed default 100%, Steering Gain default 1.00x, inversions, reset defaults), BLE connection actions, and camera feed toggle.
-  - **Personalization Tab**: Accessible from settings modal or direct top-bar Palette button (Dark/Light tone and 6 accent themes).
+  - **Personalization Tab**: Switch tabs within the settings modal to adjust appearance (Dark/Light tone and 6 accent themes).
 - **Dual Virtual Joysticks (Mecanum Kinematics)**:
   - **Dynamic Theme Personalization**: Joysticks and knobs dynamically adopt chosen Accent Themes (Cyber Blue, Emerald Green, Neon Purple, Amber Gold, Crimson, Electric Cyan) with glowing halos, tinted borders, and center pips.
   - **Left Joystick (`STEER`)**: Controls yaw rotation in place (turning left/right).
