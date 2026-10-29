@@ -47,6 +47,7 @@ unsigned long lastCommandTime = 0;
 int cmd_x = 0; // sideway / strafe (-100..100)
 int cmd_y = 0; // forward / reverse (-100..100)
 int cmd_z = 0; // yaw / steering (-100..100)
+int currentServoAngle = 0; // servo angle (0..180 deg)
 
 // ---------------- BLE ----------------
 BLECharacteristic *bleTx;
@@ -59,6 +60,7 @@ void enableDriver();
 void disableDriver();
 void applyMotors(int x, int y, int z);
 void stop_all();
+void setServo(int angle, int pos = -1);
 void pushStatus();
 void updateDisplay();
 bool checkRoverI2C();
@@ -128,6 +130,7 @@ void setup() {
   roverDetected = checkRoverI2C();
   if (roverDetected) {
     Serial.println("[ROVER] RoverC base detected on I2C (0x38)");
+    setServo(0);
   } else {
     Serial.println("[ROVER] WARNING: RoverC base NOT responding! Check power switch.");
   }
@@ -272,10 +275,31 @@ void updateDisplay() {
   M5.Lcd.setTextSize(2);
   M5.Lcd.setCursor(5, 96);
   M5.Lcd.printf("X:%-3d Y:%-3d Z:%-3d ", cmd_x, cmd_y, cmd_z);
+
+  // Line 6: Live Servo Angle
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setCursor(5, 116);
+  M5.Lcd.printf("SERVO: %3d DEG     ", currentServoAngle);
 }
 
 // =================================================
-// Command parser (supports "drive x,y,z", "motor x,y,z", "x,y,z" or legacy "motor L,R")
+// Servo control helper
+void setServo(int angle, int pos) {
+  angle = constrain(angle, 0, 180);
+  currentServoAngle = angle;
+  if (pos >= 0 && pos <= 1) {
+    roverc.setServoAngle((uint8_t)pos, (uint8_t)angle);
+    Serial.printf("[SERVO] pos=%d angle=%d\n", pos, angle);
+  } else {
+    // Default: set both servo channels 0 and 1 so whichever port is plugged in works!
+    roverc.setServoAngle(0, (uint8_t)angle);
+    roverc.setServoAngle(1, (uint8_t)angle);
+    Serial.printf("[SERVO] all angle=%d\n", angle);
+  }
+}
+
+// =================================================
+// Command parser (supports "drive x,y,z", "motor x,y,z", "x,y,z", legacy "motor L,R", and "servo <angle>")
 void parseCommand(String cmd) {
   cmd.trim();
   if (cmd.length() == 0) return;
@@ -283,6 +307,38 @@ void parseCommand(String cmd) {
 
   Serial.print("[RX RAW] ");
   Serial.println(cmd);
+
+  String lowerCmd = cmd;
+  lowerCmd.toLowerCase();
+
+  // ---- Servo Command: "servo <angle>", "servo <ch>,<angle>", "s <angle>" ----
+  if (lowerCmd.startsWith("servo") || lowerCmd.startsWith("s ") || lowerCmd.startsWith("s:") || lowerCmd.startsWith("s=")) {
+    int startIdx = 5;
+    if (lowerCmd.startsWith("s ") || lowerCmd.startsWith("s:") || lowerCmd.startsWith("s=")) {
+      startIdx = 1;
+    }
+    int sp = lowerCmd.indexOf(' ', startIdx - 1);
+    int col = lowerCmd.indexOf(':', startIdx - 1);
+    int eq = lowerCmd.indexOf('=', startIdx - 1);
+    if (sp >= 0) startIdx = sp + 1;
+    else if (col >= 0) startIdx = col + 1;
+    else if (eq >= 0) startIdx = eq + 1;
+
+    String param = cmd.substring(startIdx);
+    param.trim();
+    param.replace(' ', ',');
+
+    int comma = param.indexOf(',');
+    if (comma >= 0) {
+      int pos = param.substring(0, comma).toInt();
+      int angle = param.substring(comma + 1).toInt();
+      setServo(angle, pos);
+    } else {
+      int angle = param.toInt();
+      setServo(angle, -1);
+    }
+    return;
+  }
 
   String payload = cmd;
   if (payload.startsWith("drive") || payload.startsWith("motor")) {
@@ -348,8 +404,8 @@ void pushStatus() {
 
   char buf[64];
   snprintf(buf, sizeof(buf),
-           "status V=%.2f I=%.1f\n",
-           supplyV, current_mA);
+           "status V=%.2f I=%.1f S=%d\n",
+           supplyV, current_mA, currentServoAngle);
 
   bleTx->setValue((uint8_t*)buf, strlen(buf));
   bleTx->notify();

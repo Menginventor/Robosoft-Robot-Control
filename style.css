@@ -529,6 +529,335 @@ body {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent);
 }
 
+/* ===== SERVO CONTROL DOCK ===== */
+.servo-dock {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: radial-gradient(circle at 50% 0%, var(--surface-elevated) 0%, var(--card-bg) 100%);
+  border: 1.5px solid var(--accent-badge-border);
+  border-radius: 20px;
+  padding: 12px 14px 10px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px var(--accent-badge-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  transition: opacity 0.3s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.servo-dock.disabled {
+  opacity: 0.42;
+  border-color: var(--card-border);
+  box-shadow: none !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+.servo-dock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.servo-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--accent-badge-text);
+  text-shadow: 0 0 8px var(--accent-badge-bg);
+}
+
+.servo-title svg {
+  color: var(--accent);
+}
+
+.servo-angle-badge {
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--accent-badge-bg);
+  color: var(--accent-badge-text);
+  border: 1px solid var(--accent-badge-border);
+  min-width: 36px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+/* Gauge Arc & Needle */
+.servo-gauge-container {
+  width: 120px;
+  height: 52px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.servo-gauge-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.servo-gauge-bg {
+  stroke: var(--surface-elevated-hover);
+}
+
+.servo-gauge-active {
+  stroke: var(--accent);
+  stroke-dasharray: 125.66;
+  stroke-dashoffset: 125.66;
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.25, 1, 0.5, 1), stroke 0.25s ease;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.servo-pivot {
+  fill: var(--card-bg);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.servo-needle {
+  stroke: var(--accent);
+  transform-origin: 50px 50px;
+  transform: rotate(0deg);
+  transition: transform 0.35s cubic-bezier(0.34, 1.3, 0.64, 1), stroke 0.25s ease;
+  filter: drop-shadow(0 0 3px var(--accent-glow));
+}
+
+.servo-scale-labels {
+  position: absolute;
+  bottom: -2px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* Servo Dock Fine Control Slide Bar */
+.servo-slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 6px;
+  margin: 1px 0;
+}
+
+.servo-fine-slider {
+  flex: 1;
+  width: auto;
+  margin: 0 4px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.servo-fine-slider .slider-track {
+  height: 6px;
+  background: var(--surface-elevated-hover);
+  border-radius: 3px;
+}
+
+.servo-fine-slider .slider-thumb {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.servo-fine-slider.dragging .slider-thumb,
+.servo-fine-slider .slider-thumb:active {
+  transform: translate(-50%, -50%) scale(1.22);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.servo-nudge-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--card-border);
+  background: var(--surface-elevated);
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.servo-nudge-btn:hover {
+  background: var(--surface-elevated-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.servo-nudge-btn:active {
+  transform: scale(0.9);
+  background: var(--accent-badge-bg);
+  border-color: var(--accent);
+}
+
+/* Primary Action Button (Move to 180° / 0°) */
+.servo-action-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--accent-glow);
+  touch-action: manipulation;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.servo-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--accent-glow);
+}
+
+.servo-action-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.servo-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.servo-action-btn.at-max .servo-btn-icon {
+  transform: rotate(180deg);
+}
+
+/* Quick Preset Buttons */
+.servo-presets {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+}
+
+.servo-preset-btn {
+  flex: 1;
+  padding: 5px 0;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--surface-elevated);
+  color: var(--text-main);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.servo-preset-btn:hover {
+  background: var(--surface-elevated-hover);
+  border-color: var(--accent-badge-border);
+}
+
+.servo-preset-btn:active {
+  background: var(--surface-elevated-active);
+  transform: scale(0.95);
+}
+
+.servo-preset-btn.active {
+  background: var(--accent-badge-bg);
+  border-color: var(--accent);
+  color: var(--accent-badge-text);
+  box-shadow: 0 0 10px var(--accent-badge-bg);
+}
+
+.servo-preset-btn.sweep-btn {
+  flex: 1.2;
+}
+
+.servo-preset-btn.sweep-btn.sweeping {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: sweepPulse 1.2s infinite alternate;
+}
+
+@keyframes sweepPulse {
+  0% { box-shadow: 0 0 8px var(--accent-glow); }
+  100% { box-shadow: 0 0 18px var(--accent-glow); }
+}
+
+/* Responsive adjustment for servo dock on smaller screens / mobile */
+@media (max-height: 480px) {
+  .servo-dock {
+    bottom: 12px;
+    padding: 8px 12px;
+    gap: 5px;
+    width: 200px;
+  }
+  .servo-gauge-container {
+    height: 42px;
+    width: 100px;
+  }
+  .servo-action-btn {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+  .servo-preset-btn {
+    padding: 4px 0;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 680px) {
+  .servo-dock {
+    width: 185px;
+    padding: 8px 10px;
+  }
+  .servo-action-btn {
+    font-size: 11px;
+    padding: 7px 8px;
+  }
+  .servo-preset-btn {
+    font-size: 10px;
+  }
+}
+
 /* ===== OVERLAY ===== */
 #overlay {
   position: fixed;

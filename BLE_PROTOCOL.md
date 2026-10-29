@@ -80,17 +80,37 @@ motor <left>,<right>\n
 ```
 Firmware converts differential left/right inputs into forward (`y = (l + r)/2`) and yaw (`z = (r - l)/2`).
 
+### 3.3 Servo Motor Control (v1.0.9+)
+Controls standard hobby RC servos (0° to 180°) connected to the M5 RoverC servo port(s):
+
+```text
+servo <angle>\n
+```
+*Also accepts: `servo <pos>,<angle>\n` or `s <angle>\n`.*
+
+| Parameter | Range | Description |
+| :---: | :---: | :--- |
+| **`angle`** | `0` .. `180` | Target angle in degrees |
+| **`pos`** *(optional)* | `0` or `1` | Specific servo channel port (defaults to setting both 0 & 1) |
+
+#### Examples:
+- **Move to 0°**: `servo 0\n`
+- **Move to 90° (Midpoint)**: `servo 90\n`
+- **Move to 180°**: `servo 180\n`
+- **Target Servo Port 0 specifically**: `servo 0,180\n`
+- **Target Servo Port 1 specifically**: `servo 1,45\n`
+
 ---
 
 ## 4. Robot to Controller (TX - Telemetry Protocol)
 
-The robot streams telemetry notifications from the **TX Characteristic** (`...90ad`) at **2 Hz** (every 500 ms) as long as BLE is connected. The client (`v1.0.6`) features a universal parser supporting standard power readings, arbitrary sensor metrics, key-value pairs, JSON objects, and raw text strings.
+The robot streams telemetry notifications from the **TX Characteristic** (`...90ad`) at **2 Hz** (every 500 ms) as long as BLE is connected. The client (`v1.0.6+`) features a universal parser supporting standard power readings, arbitrary sensor metrics, key-value pairs, JSON objects, and raw text strings.
 
 ### 4.1 Telemetry Packet Formats
 
-1. **Standard Power Format**:
+1. **Standard Power & State Format**:
    ```text
-   status V=<voltage> I=<current>\n
+   status V=<voltage> I=<current> S=<servoAngle>\n
    ```
 2. **Arbitrary Key-Value Pairs** (space or comma-delimited):
    ```text
@@ -98,7 +118,7 @@ The robot streams telemetry notifications from the **TX Characteristic** (`...90
    ```
 3. **JSON Object Payload**:
    ```json
-   {"v": 4.12, "temp": 28.5, "rpm": 1200}
+   {"v": 4.12, "temp": 28.5, "rpm": 1200, "servo": 180}
    ```
 
 ### 4.2 Standard Fields & Formatting
@@ -107,6 +127,7 @@ The robot streams telemetry notifications from the **TX Characteristic** (`...90
 | **`V` / `VOLT`** | $V$ | `V: X.XX V` | Battery/bus supply voltage |
 | **`I` / `CUR`** | $mA$ | `I: XXX.X mA` | Battery charge or discharge current |
 | **`BAT` / `SOC`** | $\%$ | `BAT: XX%` | Battery state-of-charge percentage |
+| **`S` / `SERVO`** | $^\circ$ | `SERVO: XXX°` | RoverC servo motor current angle |
 | **`TEMP`** | $^\circ\text{C}$ | `TEMP: XX.X°C` | Core or ambient temperature |
 | **`RPM`** | $\text{RPM}$ | `RPM: XXXX RPM` | Motor rotational velocity |
 | **`DIST`** | $\text{cm}$ | `DIST: XX.X cm` | Ultrasonic / ToF range sensor reading |
